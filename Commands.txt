@@ -1,0 +1,1646 @@
+vssDaily used Commands:
+--------------------
+
+
+SELECT SERVERPROPERTY(‘productversion’), SERVERPROPERTY (‘productlevel’), SERVERPROPERTY (‘edition’)-------------------> Gives Information about version,edition and Product level.
+select SERVERPROPERTY('ComputerNamePhysicalNetBIOS')    					-----------------------> Gives the Server Name
+SELECT GETDATE()                                        					-----------------------> Gives the Server Date
+xp_readerrorlog                                         					-----------------------> Gives the total error logs  
+Exec master.dbo.xp_readerrorlog                         					-----------------------> Gives the total error logs      
+xp_sqllitespeed_version                                 					-----------------------> Gives the Compression information for the Backups
+select @@VERSION                                        					-----------------------> Gives the Version fo the SQLServer
+
+select SERVERPROPERTY('ComputerNamePhysicalNetBIOS')   						------------------------> Gives the Server Name
+use SQLOPSDB                                           						------------------------> Selects that Database
+sp_spaceused                                           						------------------------> Gives the Data and Log files sizes present in the Databases
+sp_helpdb master                                       						----------------------->  Gives the Database Size 
+xp_fixeddrives                                         						------------------------> Gives the Free space present in the disks in MB
+
+dbcc sqlperf(logspace)                                 						-----------------------> Gives the Log space usage of the databases
+dbcc opentran(tempdb)                                  						-----------------------> Gives the SPID of the Open Transactions
+sp_spaceused                                           						-----------------------> Gives the Data and log file sizes present in the Databases
+xp_readerrorlog                                        						-----------------------> Gives the total error logs
+
+sp_who2                                                						-----------------------> Gives the details of the total logins for that server
+sp_who2 active                                         						-----------------------> Gives the details of the total logins that are currently active
+sp_lock                                                						-----------------------> Gives the information related to different types of locks S,I,X,U,Sch-S,Sch-M 
+
+sp_helpdb                                              						-----------------------> Gives the information related to the Database Size
+xp_readerrorlog                                        						-----------------------> Gives the total error logs
+select * from SQLOPSDB..Tbl_Proc_Errors                						-----------------------> error time for all job 
+select * from SQLOPSDB..Tbl_SQLDiffBackupCommands                               		-----------------------> only diff backups           
+select * from SQLOPSDB..Tbl_ConsistencyCheckResults where Level<>10				-----------------------> check db job checking
+select * from SQLOPSDB..[Tbl_ParamBackup]							-----------------------> backup options
+select * from SQLOPSDB..[Tbl_SQLBackupCommands]                                                 -----------------------> full backup status
+select * from SQLOPSDB..[Tbl_SQLTranBackupCommands]						-----------------------> trans backup status
+select * from SQLOPSDB..Tbl_BackupStripeSet                                                     -----------------------> stripe backups checking    
+select * from SQLOPSDB..Tbl_DB_SpaceIssues                                                      -----------------------> To Check the DB Space related issues
+update SQLOPSDB..Tbl_SQLDiffBackupCommands set diffbkpstatus='0' where databaseid='9'           -----------------------> Updating the Database Status into progress
+update SQLOPSDB..Tbl_SQLBackupcommands set backupstatus='0' where databaseid='1'                -----------------------> Updating the Database Status into progress
+select sys.fn_hadr_backup_is_preferred_replica(@warehouse)                                      
+SELECT is_snapshot,is_copy_only, * FROM msdb..backupset where type <>L
+select sys.fn_hadr_backup_is_preferred_replica(@warehouse) 
+select * from SQLOPSDB..Tbl_ConsistencyCheckResults where Level<>10                            ------------------------> Gives info about DBCC Check DB i.e Consistency related things
+select * from sqlopsdb..[Tbl_SQLBlockedInfo]                                                   ------------------------> Gives info about the Blocked Processes
+select * from  sqlopsdb.[dbo].[Tbl_ConsistencyCheckCommands]                                   ------------------------> Gives info about the Consistency Check Commands related to DBCC.
+
+select percent_complete,* from sys.dm_exec_requests where percent_complete > 0                 ------------------------> To Know how much amount of Backup process is completed.
+
+select percent_complete,* from sys.dm_exec_requests where session_id=SID	               ------------------------> To know how much amount of the process is completed for a particular session.
+
+SELECT is_snapshot,is_copy_only, * FROM msdb..backupset where type !=L                         ------------------------> To know the infromation about the Snapshot and Copy only backup related information
+
+sp_removedbreplication @dbname='BAMPrimaryImport'                                              ------------------------> To remove the DB from Replication.
+
+Exclude DB from Backup                                                                         ------------------------> Excluding the DB from the Backup
+insert into SQLOPSDB..tbl_parambackup(DB_IN_EX_List,ProcType) values('-SABSupport, -econfirm, -CSC, -AppSupport, -EMCInterface, -Entitlement, -LID, -Staging, -TNC, -Vlas','FULL')
+
+update Tbl_ParamBackup set DB_IN_EX_List='PMCS_Content,Gen4,ICS_Content,PMCS,PMCS_ReportServer,ReportServer1' where ProcType='log'
+
+update Tbl_ParamBackup set BackupFolder='E:\MSSQL\Bak' where ProcType='FULL'
+
+
+DBCC Dbrecover (DB_NAME)                                                                      ------------------------->                                                               
+vssadmin list writers                                                                         -------------------------> Volume Shadow Services
+
+sp_configure 'xp_cmdshell',1                                                                  -------------------------> SQL Server Configuration Option which controls the XP_CMDShell can be executed on a system or not                                                                   
+reconfigure with override
+
+EXEC sp_configure 'show advanced options', 1;
+GO
+RECONFIGURE WITH OVERRIDE;
+
+---- To allow advanced options to be changed.
+
+EXEC sp_configure ‘show advanced options’, 1
+
+GO
+
+—- To update the currently configured value for advanced options.
+
+RECONFIGURE
+
+GO
+
+—- To enable the feature.
+SQL
+EXEC sp_configure ‘xp_cmdshell’, 1
+
+GO
+
+—- To update the currently configured value for this feature.
+
+RECONFIGURE
+
+GO 
+
+select * from sysprocesses where blocked<>0                                               ---------------------------------> To find the Blocking SPID's 
+
+sp_who2 active                                                                            ---------------------------------> To find the active transactions which are involved in Blocking.
+
+select * from msdb..log_shipping_monitor_primary                                          ---------------------------------> 
+select * from msdb..log_shipping_monitor_secondary
+select * from msdb..log_shipping_plan_databases
+select * from msdb..log_shipping_plan_history
+select * from msdb..log_shipping_monitor_secondary_history
+select secondary_database, last_copied_file,last_restored_file from msdb..log_shipping_monitor_secondary
+select destination_database,last_file_copied,last_file_loaded from msdb..log_shipping_plan_databases
+select * from Tbl_DB_SpaceIssues
+select * from sys.dm_hadr_database_replica_states 
+
+select '#'+name+'#' from sys.sysdatabases --------------------------------> To Check the trailing spaces in the databases
+
+
+xp_logininfo 'PARTTEST\ompobsql'
+
+dbcc inputbuffer(80)
+dbcc outputbuffer(80)
+DBCC FREESYSTEMCACHE  
+DBCC FREESESSIONCACHE  
+DBCC FREEPROCCACHE
+
+select * from sys.sysaltfiles
+select * from sys.master_files
+
+
+Begin
+update SQLOPSDB..Tbl_ParamBackup set BackupFolder='E:\MSSQL\TRAN' where ProcType = 'LOG'
+end
+
+insert into SQLOPSDB.dbo.Tbl_ParamBackup(BackupFolder,proctype)values ('H:\MSSQL\BAK','Full')
+insert into SQLOPSDB.dbo.Tbl_ParamBackup(BackupFolder,proctype)values('E:\MSSQL\TRAN','log')
+
+insert into SQLOPSDB..Tbl_ParamBackup (BackupFolder, AGBackupPref, proctype) values ('F:\MSSQL\TRAN', 'secondary','log')
+
+Exec SqlOpsDb.dbo.Show_Repl_Topology
+Exec sp_helpsubscription
+
+xp_backup_database @database='Changepoint', @filename='E:\Changepoint_LS_FullBackup\Changepoint.lsb', @with='stats=1'
+xp_backup_database @database='model', @filename='E:\mert2000_LS_FullBackup\model.lsb'
+xp_backup_database @database='mert2000', @filename='E:\mert2000_LS_FullBackup\mert2000.lsb'
+
+portqry -n <servername> -e 5022
+portqry -n <servername> -e 1433
+net user xxxxxx /domain
+telnet <hostname> <port>
+telnet <hostname> or IP
+
+setspn -l Redmond\wrsql
+SELECT request_session_id, COUNT (*) num_locks
+FROM sys.dm_tran_locks
+GROUP BY request_session_id
+ORDER BY count (*) DESC
+
+select * from master..sysprocesses where blocked<>0
+
+SELECT * FROM sys.dm_db_index_physical_stats(NULL, NULL, NULL, NULL , NULL)
+
+SELECT COUNT(*) FROM sys.dm_exec_query_memory_grants where grant_time is null  -----------------> Returns information about the queries that have acquired a memory grant or 
+that still require a memory grant to execute. Queries that do not have to wait on a memory grant will not appear in this view.
+
+
+SELECT   r.percent_complete, 
+  estimated_finish_time = DATEADD(MILLISECOND, estimated_completion_time, CURRENT_TIMESTAMP),  
+t.[text]FROM   sys.dm_exec_requests AS r CROSS APPLY 
+sys.dm_exec_sql_text(r.[sql_handle]) AS t WHERE   r.session_id = 71;
+
+
+sp_browsereplcmds @xact_seqno_start='0x00000B0500004182006200000000',
+@xact_seqno_end='0x00000B0500004182006200000000'
+
+SELECT servicename, service_account
+FROM   sys.dm_server_services
+GO
+
+EXEC sp_repldone @xactid = NULL, @xact_segno = NULL, @numtrans = 0,     @time = 0, @reset = 1
+
+GRANT CONNECT ON ENDPOINT::Mirroring TO [domain\user]
+GRANT CONNECT ON ENDPOINT::[Hadr_endpoint] TO [PARTNERS\_CERTPRO]
+
+
+
+
+Action taken so far: We were alerted for tempdb file full.
+We found that we do not have permissions on the SQL instance.
+Next plan of action: Please grant SA permissions to 'Redmond\psitadm' at SQL level so that we can investigate further.
+
+
+SQL Recycle Time Query run by selecting Master Database
+--------------------------------------------------------
+
+SET NOCOUNT ON
+DECLARE @crdate DATETIME, @hr VARCHAR(50), @min VARCHAR(5)
+SELECT @crdate=crdate FROM sysdatabases WHERE NAME='tempdb'
+SELECT @hr=(DATEDIFF ( mi, @crdate,GETDATE()))/60
+IF ((DATEDIFF ( mi, @crdate,GETDATE()))/60)=0
+SELECT @min=(DATEDIFF ( mi, @crdate,GETDATE()))
+ELSE
+SELECT @min=(DATEDIFF ( mi, @crdate,GETDATE()))-((DATEDIFF( mi, @crdate,GETDATE()))/60)*60
+PRINT 'SQL Server "' + CONVERT(VARCHAR(20),SERVERPROPERTY('SERVERNAME'))+'" is Online for the past '+@hr+' hours & '+@min+' minutes'
+IF NOT EXISTS (SELECT 1 FROM master.dbo.sysprocesses WHERE program_name = N'SQLAgent - Generic Refresher')
+BEGIN
+PRINT 'SQL Server is running but SQL Server Agent <<NOT>> running'
+END
+ELSE BEGIN
+PRINT 'SQL Server and SQL Server Agent both are running'
+END
+
+To know the Server Names if it is not specified in the IM
+----------------------------------------------------------
+
+Below is used to find the server name for given IM#.
+
+Run query against DWH: 
+OMCAMSQLDW01
+
+Query: 
+SELECT dbo.vManagedEntity.Fullname,dbo.vManagedEntity.Path, Alert.vAlertDetail.TicketId
+FROM Alert.vAlert INNER JOIN Alert.vAlertDetail ON Alert.vAlert.AlertGuid = Alert.vAlertDetail.AlertGuid INNER JOIN 
+dbo.vManagedEntity ON Alert.vAlert.ManagedEntityRowId = dbo.vManagedEntity.ManagedEntityRowId WHERE (Alert.vAlertDetail.TicketId = 'IM1984100')
+
+
+
+Fragmentation related Information Collection
+--------------------------------------------
+
+select  a.action_completed_dt, *
+from SQLOPSDB..Tbl_IndexFragmentationHistory a
+where collecteddate>='2014-08-02 06:04:16.247'
+and collecteddate <='2014-08-02 06:46:22.100'
+--and index_name='IX_ChangeControl'
+and action_taken='Reorganize'
+--and isprocessed=-1
+order by a.action_completed_dt desc
+
+
+Knowing the Authentication:
+---------------------------
+
+select @@servername,auth_scheme
+from sys.dm_exec_connections where session_id = @@spid
+ 
+Checking the SPN (Server Prinicipal Name):
+-----------------------------------------
+ 
+SELECT  
+    s.session_id 
+  , c.connect_time 
+  , s.login_time 
+  , s.login_name 
+  , c.protocol_type 
+  , c.auth_scheme 
+  , s.HOST_NAME 
+  , s.program_name 
+FROM sys.dm_exec_sessions s 
+  JOIN sys.dm_exec_connections c 
+    ON s.session_id = c.session_id
+
+
+
+Tracert Servername                                                       --------------------------------------------> Trace the Certificate
+
+portquery -n "destination server" -e "port no"                           --------------------------------------------> Port Listening Query
+
+
+
+Databits Path
+--------------
+10.220.224.39
+
+\\ip\itdsl\msnplat\gold
+
+
+SQLMemoryGrantsPending:
+-----------------------
+
+SELECT COUNT(*) FROM sys.dm_exec_query_memory_grants where grant_time is null
+
+ 
+
+CPUCounterQuery:
+----------------
+
+select top 1  
+
+      SQLProcessUtilization, 
+
+         record_id,
+
+      SystemIdle, 
+
+      100 - SystemIdle - SQLProcessUtilization as OtherProcessUtilization 
+
+from ( 
+
+      select
+
+            record.value('(./Record/@id)[1]', 'int') as record_id, 
+
+            record.value('(./Record/SchedulerMonitorEvent/SystemHealth/SystemIdle)[1]', 'int') as SystemIdle, 
+
+            record.value('(./Record/SchedulerMonitorEvent/SystemHealth/ProcessUtilization)[1]', 'int') as SQLProcessUtilization, 
+
+            timestamp 
+
+      from ( 
+
+            select timestamp, convert(xml, record) as record 
+
+            from sys.dm_os_ring_buffers
+
+            where ring_buffer_type = N'RING_BUFFER_SCHEDULER_MONITOR' 
+
+            and record like '%<SystemHealth>%') as x 
+
+      ) as y 
+
+order by record_id desc
+
+
+Generating the Discovery Report
+--------------------------------
+
+Go to the SQL Server Installation Center -------> Click on that Tools -----> Installed SQL Server Features Discovery Report. 
+
+
+Report Location
+---------------
+
+The SQL Server Discovery Report will be saved automatically in %ProgramFiles%Microsoft SQL Server100Setup BootstrapLog<last Setup Session>
+
+
+To find the default path:
+-------------------------
+Go to Run -----> Regedit
+
+HKEY_LOCAL_MACHINE/Software/Microsoft/Microsoft SQL Server/Instance Names/SQL
+
+HKEY_LOCAL_MACHINE/Software/Microsoft/Microsoft SQL Server/Instance Names/Setup
+
+
+DMV's (Dynamic Management Views):
+---------------------------------
+
+
+Check overall system memory status using sys.dm_os_memory_clerks, sys.dm_os_sys_info, and various performance counters.
+
+
+Check for query-execution memory reservations in sys.dm_os_memory_clerks where type = 'MEMORYCLERK_SQLQERESERVATIONS'.
+
+
+Check for queries waiting for grants using sys.dm_exec_query_memory_grants.
+
+
+Further examine memory-intensive queries using sys.dm_exec_requests.
+
+
+If a runaway query is suspected, examine the Showplan from sys.dm_exec_query_plan and batch text from sys.dm_exec_sql_text.
+
+
+sys.dm_exec_query_resource_semaphores -------> Returns the information about the Semaphore values.
+
+
+
+Scripts to find out VLF Counts:
+-------------------------------
+
+
+--variables to hold each 'iteration'  
+declare @query varchar(100)  
+declare @dbname sysname  
+declare @vlfs int  
+  
+--table variable used to 'loop' over databases  
+declare @databases table (dbname sysname)  
+insert into @databases  
+--only choose online databases  
+select name from sys.databases where state = 0  
+  
+--table variable to hold results  
+declare @vlfcounts table  
+    (dbname sysname,  
+    vlfcount int)  
+  
+ 
+ 
+--table variable to capture DBCC loginfo output  
+--changes in the output of DBCC loginfo from SQL2012 mean we have to determine the version 
+ 
+declare @MajorVersion tinyint  
+set @MajorVersion = LEFT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(max)),CHARINDEX('.',CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(max)))-1) 
+ 
+if @MajorVersion < 11 -- pre-SQL2012 
+begin 
+    declare @dbccloginfo table  
+    (  
+        fileid tinyint,  
+        file_size bigint,  
+        start_offset bigint,  
+        fseqno int,  
+        [status] tinyint,  
+        parity tinyint,  
+        create_lsn numeric(25,0)  
+    )  
+  
+    while exists(select top 1 dbname from @databases)  
+    begin  
+  
+        set @dbname = (select top 1 dbname from @databases)  
+        set @query = 'dbcc loginfo (' + '''' + @dbname + ''') '  
+  
+        insert into @dbccloginfo  
+        exec (@query)  
+  
+        set @vlfs = @@rowcount  
+  
+        insert @vlfcounts  
+        values(@dbname, @vlfs)  
+  
+        delete from @databases where dbname = @dbname  
+  
+    end --while 
+end 
+else 
+begin 
+    declare @dbccloginfo2012 table  
+    (  
+        RecoveryUnitId int, 
+        fileid tinyint,  
+        file_size bigint,  
+        start_offset bigint,  
+        fseqno int,  
+        [status] tinyint,  
+        parity tinyint,  
+        create_lsn numeric(25,0)  
+    )  
+  
+    while exists(select top 1 dbname from @databases)  
+    begin  
+  
+        set @dbname = (select top 1 dbname from @databases)  
+        set @query = 'dbcc loginfo (' + '''' + @dbname + ''') '  
+  
+        insert into @dbccloginfo2012  
+        exec (@query)  
+  
+        set @vlfs = @@rowcount  
+  
+        insert @vlfcounts  
+        values(@dbname, @vlfs)  
+  
+        delete from @databases where dbname = @dbname  
+  
+    end --while 
+end 
+  
+--output the full list  
+select dbname, vlfcount  
+from @vlfcounts  
+order by dbname
+
+
+Checking the IO Latency:
+------------------------
+
+SELECT
+    [database_id],
+    [file_id],
+    [ReadLatency] =
+        CASE WHEN [num_of_reads] = 0
+            THEN 0 ELSE ([io_stall_read_ms] / [num_of_reads]) END,
+    [WriteLatency] =
+        CASE WHEN [num_of_writes] = 0
+            THEN 0 ELSE ([io_stall_write_ms] / [num_of_writes]) END
+FROM
+    sys.dm_io_virtual_file_stats (NULL, NULL)
+WHERE
+    [file_id] = 2 OR [database_id] = 2;
+GO
+
+Cluster failover related issue:
+-------------------------------
+
+Cluster network 'Cluster Network 1' is partitioned. Some attached failover cluster nodes cannot communicate with each other over the network. The failover cluster was not able to determine the location of the failure. 
+Run the Validate a Configuration wizard to check your network configuration. If the condition persists, check for hardware or software errors related to the network adapter. Also check for failures in any other network 
+components to which the node is connected such as hubs, switches, or bridges.
+
+
+DBCC CHECKDB Failure with File System Limitation
+------------------------------------------------
+
+We have DBCC CHECKDB failures on the server co1vmtfsdt14 due to file system limitation errors and hence planning to split the consistency checks by enabling below 3 jobs for the database Tfs_KALE ( exclude from DBCC CHECKDB and include it for below 3 jobs). 
+
+1.	DBCC CHECKALLOC
+2.	DBCC CHECKCATALOG 
+3.	DBCC CHECKTABLE
+
+However, while checking the configuration, we could see that Constraint [ic_chkproc] on table [Tbl_ParamConsistencyCheck] is allowing only values ? CHECKTABLE, CHECKALLOC,CHECKDB,CHECKFG. There is no entry for CHECKCATALOG. 
+
+
+USE [SQLOPSDB]
+GO
+
+ALTER TABLE [dbo].[Tbl_ParamConsistencyCheck]  WITH CHECK ADD  CONSTRAINT [ic_chkproc] CHECK  (([ProcType]='CHECKFG' OR [ProcType]='CHECKTABLE' OR [ProcType]='CHECKALLOC' OR [ProcType]='CHECKDB'))
+GO
+
+ALTER TABLE [dbo].[Tbl_ParamConsistencyCheck] CHECK CONSTRAINT [ic_chkproc]
+GO
+
+
+But DBCC CHECKCATALOG job is looking for CHECKCATALOG entry ( i.e, Stored procedure usp_DBCCCheckCatalog01) and hence we might not be able to run consistency checks for Catalog successfully unless constraint has entry for CHECKCATALOG( constraint violation).
+Could you please check this and advise.
+
+
+BACKUP FAILURE ERRORS:
+----------------------
+
+Msg 3268, Level 16, State 1, Line 1
+Cannot use the backup file 'E:\MSSQL\BAK\POEDS_Logging.bak' because it was originally formatted with sector size 4096 and is now on a device with sector size 512.
+Msg 3013, Level 16, State 1, Line 1
+BACKUP DATABASE is terminating abnormally.
+
+Msg 3268, Level 16, State 1, Line 1
+Cannot use the backup file 'E:\MSSQL\BAK\POEStore.bak' because it was originally formatted with sector size 4096 and is now on a device with sector size 512.
+Msg 3013, Level 16, State 1, Line 1
+BACKUP DATABASE is terminating abnormally.
+
+2014-10-16 00:00:10.710 spid154      Error: 3266, Severity: 16, State: 1.
+2014-10-16 00:00:10.710 spid154      The backup data at the end of "E:\MSSQL\BAK\ECITLogging.bak" is incorrectly formatted. Backup sets on the media might be damaged and unusable. To determine the backup sets on the media, use RESTORE HEADERONLY. To determine the usability of the backup sets,
+2014-10-16 00:00:10.710 spid154      Error: 3266, Severity: 16, State: 1.
+2014-10-16 00:00:10.710 spid154      The backup data at the end of "E:\MSSQL\BAK\ECITLogging.bak" is incorrectly formatted. Backup sets on the media might be damaged and unusable. To determine the backup sets on the media, use RESTORE HEADERONLY. To determine the usability of the backup sets,
+2014-10-16 00:00:10.710 Backup       Error: 3041, Severity: 16, State: 1.
+2014-10-16 00:00:10.710 Backup       BACKUP failed to complete the command BACKUP DATABASE ECITLogging. 
+
+
+2014-10-15 00:18:01.950 Backup       Log was backed up. Database: ReportServer, creation date(time): 2014/05/26(22:45:33), first LSN: 76:57:1, last LSN: 76:57:1, number of dump devices: 1, device information: (FILE=2, TYPE=DISK: {'F:\MSSQL\Tran\ReportServer_Tran.bak'}). This is an information
+2014-10-15 00:30:13.890 Backup       Error: 18210, Severity: 16, State: 1.
+2014-10-15 00:30:13.890 Backup       BackupIoRequest::ReportIoError: write failure on backup device 'E:\MSSQL\BAK\MRNew_CPDM_WE.bak'. Operating system error 112(There is not enough space on the disk.).
+2014-10-15 00:30:13.900 Backup       Error: 3041, Severity: 16, State: 1.
+2014-10-15 00:30:13.900 Backup       BACKUP failed to complete the command BACKUP DATABASE MRNew_CPDM_WE. Check the backup application log for detailed messages.
+
+
+
+
+DATABASE RESTORATION TIMINGS
+----------------------------
+
+Observation from one of the Test Environment:
+---------------------------------------------
+
+The Databse of Size 790 GB approximately is taking a time of around 1 hour 10 minutes or  71 minutes or 4341.343 sec.
+
+
+BACKUP Commands
+---------------
+
+BACKUP DATABASE ReportServer to disk='E:\Backup\ReportServer.bak' with INIT,COMPRESSION,STATS=1;
+
+BACKUP DATABASE ReportServerTempDB to disk='E:\Backup\ReportServerTempDB.bak' with INIT,COMPRESSION,STATS=1;
+
+BACKUP LOG ReportServer to disk='E:\LOG\ReportServer.trn' WITH INIT, COMPRESSION, STATS=1;
+
+BACKUP LOG ReportServerTempDB to disk='E:\LOG\ReportServerTempDb.trn' WITH INIT, COMPRESSION, STATS=1;
+
+
+RESTORE Commands
+----------------
+
+Restore Database ReportServer from DISK='\\tk5stosrv02\E$\Backup\ReportServer.bak' WITH norecovery, Stats=1;
+
+Restore Database ReportServerTempDB from DISK='\\tk5stosrv02\E$\Backup\ReportServerTempDB.bak' WITH norecovery, stats=1;
+
+Restore LOG ReportServer from DISK='\\tk5stosrv02\E$\LOG\ReportServer.trn' WITH recovery, Stats=1;
+
+Restore LOG ReportServerTempDB from DISK='\\tk5stosrv02\E$\LOG\ReportServerTempDB.trn' WITH recovery, Stats=1;
+
+Restore Database ReportServerTempDB with recovery
+
+Restore Database MSN_Ad_Sales_MSCRM from DISK='H:\MSN_Ad_Sales_MSCRM\MSN_Ad_Sales_MSCRM_backup_2015_03_18_194953_5582846.bak' WITH STANDBY ='H:\MSN_Ad_Sales_MSCRM\MSN_Ad_Sales_MSCRM.undo',stats=1
+, move 'MSN_Ad_Sales_MSCRM' to 'E:\MSSQL10_50.MSSQLSERVER\MSSQL\DATA\LOGShippedDB\MSN_Ad_Sales_MSCRM.mdf'
+, move 'ftrow_ftcat_documentindex_18589d12285b460e9312f621bc6647dc' to 'E:\MSSQL10_50.MSSQLSERVER\MSSQL\DATA\LOGShippedDB\MSN_Ad_Sales_MSCRM_1.ndf'
+, move 'MSN_Ad_Sales_MSCRM_log' to 'E:\MSSQL10_50.MSSQLSERVER\MSSQL\DATA\LOGShippedDB\MSN_Ad_Sales_MSCRM_2.LDF'
+
+
+_SQL_BackupTranAll Job History
+------------------------------
+
+Server		CO1EMCMART04
+Job Name		_SQL_BackupTranAll
+Step Name		Execute Backup Commands
+Duration		00:00:10
+Sql Severity	0
+Sql Message ID	0
+Operator Emailed	
+Operator Net sent	
+Operator Paged	
+Retries Attempted	0
+
+Message
+Executed as user: partners\emccalc1. Processed 4 pages for database 'Staging', file 'Staging_log' on file 23. [SQLSTATE 01000] (Message 4035)  
+BACKUP LOG successfully processed 4 pages in 0.242 seconds (0.129 MB/sec). [SQLSTATE 01000] (Message 3014)  
+Processed 3 pages for database 'EMCInterface', file 'EMCInterface_log' on file 23. [SQLSTATE 01000] (Message 4035)  
+BACKUP LOG successfully processed 3 pages in 0.056 seconds (0.418 MB/sec). [SQLSTATE 01000] (Message 3014)  
+Processed 4 pages for database 'AppSupport', file 'Appsupport_Log' on file 22. [SQLSTATE 01000] (Message 4035)  
+BACKUP LOG successfully processed 4 pages in 0.038 seconds (0.822 MB/sec). [SQLSTATE 01000] (Message 3014)  
+Processed 28 pages for database 'Warehouse', file 'Warehouse_log' on file 13. [SQLSTATE 01000] (Message 4035)  
+BACKUP LOG successfully processed 28 pages in 0.072 seconds (2.983 MB/sec). [SQLSTATE 01000] (Message 3014)  
+Processed 23 pages for database 'Entitlement', file 'Entitlement_Log' on file 3. [SQLSTATE 01000] (Message 4035)  
+BACKUP LOG successfully processed 23 pages in 0.152 seconds (1.182 MB/sec). [SQLSTATE 01000] (Message 3014)  
+Processed 388 pages for database 'SABSupport', file 'SABSupport_log' on file 84. [SQLSTATE 01000] (Message 4035)  
+BACKUP LOG successfully processed 388 pages in 0.603 seconds (5.026 MB/sec). [SQLSTATE 01000] (Message 3014)  
+Transactional backup on all databases was successfull.... CO1EMCMART04 [SQLSTATE 01000] (Message 0).  The step succeeded.
+
+
+REBUILDING INDEX COMMAND
+------------------------
+
+ALTER INDEX ALL ON EventAttribute REBUILD WITH (FILLFACTOR = 90,SORT_IN_TEMPDB = ON,online = On)
+
+
+PORT LISTENING QUERY
+--------------------
+
+portqry -n TK3MOETSQLU203 -e 5022 
+
+MIRRORING RELATED ERROR
+-----------------------
+
+Heartbeat time between principal and mirror database is 10 seconds and hence for every 10 seconds you principal will ping the mirror server and 
+if its failed to connect you will receive the error mentioned above".
+
+BACKUP ALL FAILURE ERROR
+------------------------
+
+2014-10-29 04:36:15.100 spid78       BackupDiskFile::CreateMedia: Backup device 'E:\MSSQL\BAK\XBL_StayCurrent_STG_<<ToDelete>>.bak' failed to create. Operating system error 123(The filename, directory name, or volume label syntax is incorrect.).
+2014-10-29 04:36:15.100 Backup       Error: 3041, Severity: 16, State: 1.
+2014-10-29 04:36:15.100 Backup       BACKUP failed to complete the command BACKUP DATABASE XBL_StayCurrent_STG_<<ToDelete>>. Check the backup application log for detailed messages
+
+
+Server Onboarded
+----------------
+
+Server       TK5SQLOPSCOR03
+Use database SQLOpsMaster
+
+SELECT ms.ServerName, org_owner01_org,org_owner03_org,org_owner04_org, 
+              case ms.OnboardStatusID  
+                     WHEN 1 THEN 'Boarded'  
+                     WHEN 2 THEN 'Completed - Non Standard' 
+                     WHEN 3 THEN 'Completed - Standard' 
+                     WHEN 4 THEN 'Decommissioned' 
+                     ELSE 'Not Onboarded' 
+              end as 'Onboard Status',  
+              si.InstanceName, SSM.ServiceModelName as 'Service Level',
+                      srv_environment,connectoid,jobsdeployed, *
+FROM ManagedServer ms 
+JOIN ManagedServerSQLInstance msi on ms.ManagedServerID = msi.ManagedServerID 
+JOIN SQLServerInstance si on msi.InstanceID = si.InstanceID 
+LEFT OUTER JOIN SCStandardView sc on sc.ServerName=ms.ServerName
+JOIN SQLServiceModel SSM on SSM.ModelID = si.ModelID 
+WHERE ms.ServerName in ('TK5PRDXSQLTRX01',
+'TK5PRDXSQLTRX02',
+'TK5PRDXSQLTRX03',
+'TK5PRDXSQLTRX04',
+'TK5PRDXSQLTRX05',
+'CO1PRDXSQLTRX01',
+'CO1PRDXSQLTRX02',
+'CO1PRDXSQLTRX03',
+'CO1PRDXSQLTRX04',
+'CO1PRDXSQLTRX05',
+'CO1PRDICFSSQL01',
+'CO1PRDICFSSQL02',
+'CO1PRDSQLSSIS01',
+'CO1PRDSQLSSRS01',
+'CO1PRDSQLSSRS02',
+'CO1PRDXSQLTAX01',
+'CO1PRDXSQLTAX02',
+'TK5PRDSQLSSIS01',
+'TK5PRDSQLSSRS01',
+'TK5PRDSQLSSRS02',
+'TK5prdxsqldst02',
+'TK5PRDxSQLMIR01',
+'TK5PRDXSQLMIR02',
+'TK5PRDXSQLTAX01',
+'TK5PRDXSQLTAX02')
+
+select top 10 * from ManagedServer
+
+
+LOG SHIPPING INFORMATION OR ERROR
+---------------------------------
+
+Alert: Log Shipping Destination
+Source: ntb_shared_redp
+Path: CO1MSBSQL01.redmond.corp.microsoft.com;MSSQLSERVER
+Last modified by: System
+Last modified time: 11/16/2014 7:02:00 AM
+Alert description: The log shipping secondary database CO1MSBSQL01.ntb_shared_redp has restore threshold of 45 minutes and is out of sync. No restore was performed for 47 minutes. 
+Restored latency is 15 minutes. Check agent log and logshipping monitor information.
+
+
+
+Could see that primary server for the database : ntb_shared_redp is TK5XITMSBSQL11. 
+Further, we could see that the primary database for log shipping : ntb_shared is configured for mirroring as a mirrored server. 
+Hence, the database : ntb_shared is in Restoring State.
+
+Also, LSBackup_TK5XITMSBSQL11_ntb_shared job is failing with the below error:
+2014-11-16 13:15:04.08	A transactional log backup could not be generated because the database is in either NORECOVERY mode or STANDBY mode. Primary Database: 'ntb_shared'.
+
+Kindly let us know if any changes has been made at your end and also let us know how to proceed further.
+
+
+
+Index Fragmentation
+-------------------
+
+SELECT OBJECT_NAME(ind.OBJECT_ID) AS TableName, 
+ind.name AS IndexName, indexstats.index_type_desc AS IndexType, 
+indexstats.avg_fragmentation_in_percent 
+FROM sys.dm_db_index_physical_stats(DB_ID(), NULL, NULL, NULL, NULL) indexstats 
+INNER JOIN sys.indexes ind  
+ON ind.object_id = indexstats.object_id 
+AND ind.index_id = indexstats.index_id 
+WHERE indexstats.avg_fragmentation_in_percent > 30 
+ORDER BY indexstats.avg_fragmentation_in_percent DESC
+
+Memory Grants
+-------------
+
+SELECT * FROM sys.dm_exec_query_memory_grants WHERE grant_time IS NULL
+
+SELECT total_physical_memory_kb,available_physical_memory_kb,
+system_memory_state_desc FROM sys.dm_os_sys_memory
+
+SQL Handle
+----------
+
+Select sql_handle from sys.dm_exec_requests where session_id=66
+
+Select * from sys.dm_exec_sql_text (0x02000000F5FF28252E02F4A2F6F9E531F0933C978149BA5C) 
+
+
+Applicaton related queries:
+---------------------------
+
+USE master 
+GO 
+SELECT [name], database_id, is_cdc_enabled  
+FROM sys.databases where is_cdc_enabled=1      
+GO
+
+USE ICS 
+GO 
+SELECT [name], is_tracked_by_cdc  
+FROM sys.tables where is_tracked_by_cdc=1
+GO 
+
+:P
+
+SINGLE USER MODE
+----------------
+
+C:\Windows\system32>net start mssqlserver /m /T3608 /f
+The SQL Server (MSSQLSERVER) service is starting.
+The SQL Server (MSSQLSERVER) service was started successfully.
+
+
+C:\Windows\system32>sqlcmd
+1> create login [redmond\psitadm] from windows
+2> go
+1> exec sys.sp_addsrvrolemember @loginname = N'redmond\psitadm', @rolename = N's
+ysadmin';
+2> go
+HResult 0xC9, Level 16, State 4
+Procedure or function 'sp_addsrvrolemember' expects parameter '@loginame', which
+was not supplied.
+1> exec sys.sp_addsrvrolemember @loginame = N'redmond\psitadm', @rolename = N'sy
+sadmin';
+2> go
+1> exit
+
+C:\Windows\system32>
+
+
+Open another CMD and enter:
+CREATE LOGIN [Domain\Account] from WINDOWS
+EXEC sys.sp_addsrvrolemember @loginame = N'Domain\Account', @rolename = N'sysadmin'; -- To grant SA permissions
+Make sure to enter GO after every statement for it to get executed.
+
+
+MIMOS Servers
+-------------
+
+SELECT  dest.text AS [Command text] ,         des.login_time ,         des.[host_name] ,         des.[program_name] ,         der.session_id ,         dec.client_net_address ,         der.status ,         der.command , 
+        DB_NAME(der.database_id) AS DatabaseName 
+FROM    sys.dm_exec_requests der 
+        INNER JOIN sys.dm_exec_connections dec 
+                       ON der.session_id = dec.session_id         INNER JOIN sys.dm_exec_sessions des 
+                       ON des.session_id = der.session_id 
+        CROSS APPLY sys.dm_exec_sql_text(sql_handle) AS dest WHERE   des.is_user_process = 1
+              and  des.host_name like '%PH1MIMOSCSQL2%'
+
+
+AG RELATED
+----------
+
+SELECT ag.name AS ag_name, ar.replica_server_name AS ag_replica_server, db_name(dr_state.database_id) as DBname, dr_state.log_send_queue_size, is_ag_replica_local = CASE WHEN ar_state.is_local = 1 THEN N'LOCAL' ELSE 'REMOTE' END ,  ag_replica_role = CASE WHEN ar_state.role_desc IS NULL THEN N'DISCONNECTED' ELSE ar_state.role_desc END 
+FROM (( sys.availability_groups AS ag JOIN sys.availability_replicas AS ar ON ag.group_id = ar.group_id ) 
+                    JOIN sys.dm_hadr_availability_replica_states AS ar_state
+                         ON ar.replica_id = ar_state.replica_id) 
+                  JOIN sys.dm_hadr_database_replica_states dr_state 
+                  on ag.group_id = dr_state.group_id and dr_state.replica_id = ar_state.replica_id
+
+To Fetch users from Windows Group:
+----------------------------------
+
+EXEC master.dbo.xp_logininfo 'REDMOND\OMCAM-FABRI', 'members' 
+
+Power Shell Command Cluster Group:
+----------------------------------
+
+get -clustergroup -cluster Servername
+
+get-cachehost
+
+get -CacheStatistics Tablename 
+
+Changes related to AO:
+----------------------
+
+Find the cluster name for the current host .................. get -cluster run this command in Powershell.
+
+List all resource groups in the cluster  .................... get -clustergroup
+
+List all resources in the AlwaysOn resource group ........... 
+
+Migration Activity:
+-------------------
+
+Hi SQL Team – Recently we migrated our environment from SQL 2008 R2 PHY machine to SQL Server 2012 VM environment and after it we started facing performance problem to execute a particular SP. That SP is executing in 31 seconds at PHY machine but same SP is taking 45 mins time to complete at VM environment. At new environment we did following things :
+ 
+1.	updated statistics with full scan against all tables at db ITSMReporting.
+2.	rebuild all indexes (online and offline both) at db ITSMReporting.
+3.	DBCC CHECKDB WITH DATA_PURITY;
+4.	DBCC UPDATEUSAGE(ITSMReporting);
+5.	Try to give a different maxdop options to execute that SP. 
+ 
+Even we didn’t change database compatibility level in new environment but still it’s taking time to complete. 
+ 
+PHY machine Name : ESDPRDREPT\REPT
+Db name : ITSMReporting
+ 
+New VM instance name : CO1MOFPRDESDCL2\ESDPRDVREPT
+Db name : ITSMReporting
+ 
+I’m attaching here that SP and their plans at PHY and VM machines respectively please open it in SSMS since in plan explorer full plan can be cut and advise on it. 
+Thanks. 
+
+SQL Writer issues:
+------------------
+  
+How to Troubleshoot SQL VSS Writer Issues  
+Infrastructure Incident Management  
+SQL Incident Management  
+SQL Server 2005/2008/2008R2/2012. 
+
+Very often DPM backups fail and it is found that either SQL Writer is not getting listed in vssadminwriters list or other issues. 
+
+This document focuses on the different issues which could lead to DPM backup failures from SQL perspective.
+ 
+  ·        VSS
+VSS is a framework that consists of a set of interfaces and structures that enable applications to perform backups of volumes while other applications use the data in these volumes. VSS is included with Microsoft Windows XP and Microsoft Windows Server 2003 and later versions.
+
+·        Backup applications
+A backup application is any Windows application that requests a snapshot backup be taken by using VSS. For example, the Windows NT backup application that is included with Windows is a backup application. 
+
+·        Writers
+Writers are applications or services that store persistent information on disk and that cooperate with providers and requestors through the shadow copy interface. We will discuss the MSDEWriter writer and the SqlServerWriter writer in this article. 
+
+o   MSDEWriter: The MSDEWriter writer is a VSS Writer for SQL Server. MSDEWriter is included with the VSS framework in Windows XP and Windows Server 2003. MSDEWriter works with SQL Server 7.0, SQL Server 2000, and SQL Server 2005. 
+
+o   SqlServerWriter: The SqlServerWriter writer is a VSS Writer for SQL Server. SqlServerWriter is included with SQL Server 2005. SqlServerWriter only works with instances of SQL Server 2005 and later.
+
+SQL Server VSS Writer service is used for backup operation by Backup Team. The first prerequisite for DPM backups to be successful is having SQLSERVERWRITER in Stable state with No Error.
+
+In SQL Server 2000, VSS Writer (MSDE Writer) is shipped with VSS Framework. From SQL server 2005 onwards SQL Writer is preferred writer. Hence, we do not find SQL Server Writer in SQL 2000 servers.
+Please note that in SQL2005 and onwards, SQL Writer is the preferred writer, though MSDE Writer will continue to work and will be the default writer if installed and SQL Writer is not enabled. 
+  Common Issues with SQL server writer:
+
+
+
+1)               SQL Server Writer is not enlisted while executing command  ‘VSSadmin list writers’ from command prompt in following cases:
+[Please note that, in Windows Server 2008, run cmd(command prompt) as administrator’].
+
+
+
+a.      ‘SQLServer VSS Writer’ service is disabled (services.msc) or stopped.
+
+b.      There are trailing space after database name. Remove trailing space(s) from database name. This can be found through the below script:
+select '#'+name+'#' from sys.sysdatabases.
+
+To resolve the issue, ask for a database downtime and rename the database, removing trailing spaces.
+
+c.      There have been few cases where the SQL server writer was not enlisted dueto trailing space found in file names. This can be identified using the below script:
+select '#'+name+'#' from sys.sysaltfiles.
+
+To resolve the issue, take the database downtime and rename the file by removing trailing spaces.
+
+d.      ’NT Authority\SYSTEM’ login is disabled or not having ‘SA’ permissions.
+
+When the VSS service and the SQLWriter service are installed, the service startup account is configured as Local System [NT AUTHORITY\SYSTEM]. When the writer tries to establish a connection to instances of SQL Server, the writer uses the credentials of the Local System [NT AUTHORITY\SYSTEM] startup account.
+
+e.      If there is more than one SQL instance, ’NT Authority\SYSTEM’ login must be having ‘sa’ permissions on both instances.
+
+ 
+
+2)               SQLServer Writer failing ‘Non retryable error’, ‘failed’. :
+
+a.      In such cases check ‘SQLServer VSS Writer’ Service, make sure it is not in ‘Starting’ state. In case if it is in starting state for a long time, Kill the service from command prompt
+
+b.      Check the event viewer for error message corresponding to SQL VDI errors. In 90% of cases, the issue has been ‘Transaction log file full’. Check for the cause behind log file full and take appropriate actions to resolve log file issue.
+
+If you need to escalate the IR, follow the escalation process documented here  
+
+
+TempDb issue:
+-------------
+
+ Insufficient space in tempdb to hold row versions. Need to shrink the version store to free up some space in tempdb. 
+Transaction (id=1426243189 xsn=30837375 spid=64 elapsed_time=1806) has been marked as victim and it will be rolled back if it accesses the
+
+
+Replication dropping the distributor:
+-------------------------------------
+
+
+use [master]
+exec sp_dropdistributor @no_checks = 1, @ignore_distributor = 1
+GO
+
+
+Replication Issue:
+------------------
+
+Initially, we have checked and found the latency for MICSUBS which was resolved by adding parameters: SubscriptionStream and Outputfile. Further, 
+the issue occurred for SQLRAY and found the semaphore timed out errors for log reader agent. to resolve the semaphore timeout errors, we have transferred 
+the issue to NetIM. After making some tweaks in the distribution agent (Adding -subscriptionStreams parameter and a few others) the transactions started delivering.
+Now the replication is in sync and no issues found.
+
+
+Database File Growth Settings
+-----------------------------
+
+select db_name(database_id),type_desc,name,physical_name,state_desc,size/128 Size,
+
+case when max_size = -1 then -1 when type = 1 and max_size = 268435456 then -1 else ( max_size / 128) end as max_sizeMB,
+
+case is_percent_growth when 0 then ( growth / 128 ) when 1 then growth else null end as growth ,
+
+case is_percent_growth when 0 then cast(( growth / 128 ) as varchar(20)) +' MB' when 1 then cast(growth as varchar(20)) + ' Percent' else null end as growth ,
+
+case is_percent_growth when 0 then ( growth / 128)   when 1 then ( ( growth / 100 ) * size ) / 128 else null end as nextGrowthIncMB 
+
+from sys.master_files
+
+
+Disk Space on SQL Server
+------------------------
+
+SELECT distinct 
+
+volume_mount_point DriveName, 
+
+total_bytes/1048576 CapacityMB, 
+
+available_bytes/1048576 FreeSpaceMB
+
+FROM sys.master_files AS f CROSS APPLY sys.dm_os_volume_stats (f.database_id, f.file_id)
+
+ 
+Server Getting Hung
+-------------------
+
+
+Server Im has checked the server CPU usage and memory utilization are normal. Server is stable.
+Able to repro the issue. Only the session on which trying to open SSMS is getting hung.
+We found that server has low free space on C drive. Took downtime and ran pagefile script and cleared 10 GB free space. 
+Moved the VM to less loaded node on Host cluster. 
+Latest IPAK is installed..
+Had a call with SQL team and they found no issues with settings and are able to open the console when using Run as Administrator.
+The VM is running on 1 vCPU and hence we suggested user to have atleast 2-3 vCPUs to have optimum performance, but user stated the server was fine and issue started 
+only 3 days and no reported changes have been done recently.
+ran Procmon tool and checked for the Access Denied logs.
+Able to find some registries related to SSMS and corrected permissions. Still the same.
+Handle count is stable all the time.
+Took perfmon counters for memory, processors, phyiscal disks. And repro'ed the issue.
+Tried to analyse the logs using PAL and can only see that processor utilization went high for few seconds but came back to normal soon..
+
+
+H@YWz9my
+
+
+k0741c2owz.database.windows.net 
+
+
+LastRun Status of the Job
+-------------------------
+
+
+DECLARE @job_id binary(16)
+SELECT @job_id = job_id FROM msdb.dbo.sysjobs WHERE (name = N'ICOE_BTS_DB_Backup_Files_Purge')
+ 
+SELECT top 1 
+         CONVERT(VARCHAR,DATEADD(S,(run_time/10000)*60*60 /* hours */  
+          +((run_time - (run_time/10000) * 10000)/100) * 60 /* mins */  
+          + (run_time - (run_time/100) * 100)  /* secs */
+           ,CONVERT(DATETIME,RTRIM(run_date),113)),100) AS [Time Run]
+         ,CASE WHEN enabled=1 THEN 'Enabled'  
+               ELSE 'Disabled'  
+          END [Job Status]
+         ,CASE WHEN SJH.run_status=0 THEN 'Failed'
+                     WHEN SJH.run_status=1 THEN 'Succeeded'
+                     WHEN SJH.run_status=2 THEN 'Retry'
+                     WHEN SJH.run_status=3 THEN 'Cancelled'
+               ELSE 'Unknown'  
+          END [Job Outcome]
+FROM   sysjobhistory SJH  
+JOIN   sysjobs SJ  
+ON     SJH.job_id=sj.job_id     
+WHERE  step_id=0  
+AND    DATEADD(S,  
+  (run_time/10000)*60*60 /* hours */  
+  +((run_time - (run_time/10000) * 10000)/100) * 60 /* mins */  
+  + (run_time - (run_time/100) * 100)  /* secs */,  
+  CONVERT(DATETIME,RTRIM(run_date),113)) >= DATEADD(d,-1,GetDate())  
+ORDER BY name,run_date,run_time 
+
+SELECT DATEDIFF(HOUR, SYSDATETIME(), SYSUTCDATETIME());
+
+SELECT SWITCHOFFSET(SYSUTCDATETIME(), '-05:00');
+
+Power shell commands:
+---------------------
+
+
+The first PowerShell command below will tell you if there are any firewall rules configured for port 1433 (the default SQL listening port). If it returns nothing, then you need to create a new firewall rule to allow 1433 inbound.
+
+Get-NetFirewallPortFilter | Where {$_.LocalPort -eq "1433"} | Get-NetFirewallRule | ft DisplayName, Direction, Profile, Action
+
+This second command will connect to the local running SQL instance and check its 
+
+sqlcmd -E -S . -Q "SELECT @@VERSION"
+
+You’ll see 4 lines of output, the interesting one will be the last one and should resemble:
+
+DEVELOPER EDITION (64-BIT) ON WINDOWS NT 6.3 <X64> (BUILD 9935: ) (HYPERVISOR)
+
+
+
+select * from sys.objects where type = 'u' and name like 'sysuserinfo%'
+
+
+_SQL_IndexFragmentationCollection Job failure:
+----------------------------------------------
+
+Cannot insert the value NULL into column 'object_name', table 'SQLOPSDB.dbo.Tbl_IndexFragmentation'; column does not allow nulls. INSERT fails.
+
+fix for the above error:
+------------------------
+
+ALTER TABLE [dbo].[Tbl_IndexFragmentation] ADD  DEFAULT ((0)) FOR [object_name]
+GO
+
+Enabling Always on through Power shell:
+---------------------------------------
+
+Enabling AlwaysOn through PowerShell:
+Enable-SqlAlwaysOn -Path SQLSERVER:\SQL\<instancename>\DEFAULT -force
+
+
+Here is the PS script to enable AlwaysOn feature for Nodes SRV2, SRV3 and SRV4 for DEFAULT instance. If you want to use named instance it would be SQLSERVER:\SQL\$replica\<InstanceName>
+
+foreach($replica in "SRV2","SRV3","SRV4")
+{
+       "Enable AlwaysOn Availability Groups for instance " + $replica.tostring() 
+       Enable-SqlAlwaysOn -PATH SQLSERVER:\SQL\$replica\DEFAULT -FORCE
+} 
+
+
+Query to get information about the database related files:
+----------------------------------------------------------
+
+SELECT RTRIM(name) AS [Segment Name], groupid AS [Group Id], filename AS [File Name],
+   CAST(size/128.0 AS DECIMAL(10,2)) AS [Size in MB],
+   CAST(FILEPROPERTY(name, 'SpaceUsed')/128.0 AS DECIMAL(10,2)) AS [Space Used],
+   CAST(size/128.0-(FILEPROPERTY(name, 'SpaceUsed')/128.0) AS DECIMAL(10,2)) AS [Available Space],
+   CAST((CAST(FILEPROPERTY(name, 'SpaceUsed')/128.0 AS DECIMAL(10,2))/CAST(size/128.0 AS DECIMAL(10,2)))*100 AS DECIMAL(10,2)) AS [Percent Used]
+FROM sysfiles
+ORDER BY groupid DESC
+
+
+
+  
+  
+-----------------------------------------------------------------------------------------------------  
+-- OBJECT NAME         : usp_CapacityMonitor  
+-- OBJECT TYPE   : Procedure  
+-- AUTHOR               : murthycs  
+-- DESCRIPTION         : Monitors Data & Log file usage.  
+-- Version    : 2.0  
+-----------------------------------------------------------------------------------------------------  
+  
+  
+/*  
+Version Change History  
+-----------------------------------------------------------------------------------------------------  
+Date   Version  alias  Change Details  
+  
+-----------------------------------------------------------------------------------------------------  
+EXEC usp_CapacityMonitor  
+*/  
+  
+CREATE PROCEDURE [dbo].[usp_CapacityMonitor]  
+AS  
+  
+SET NOCOUNT ON  
+  
+-- Variable declaration  
+DECLARE  
+@LFThreshold int,  
+@DFThreshold int,  
+@svrName varchar(50),  
+@sql varchar(400),  
+@sqlcmd nvarchar(2000),  
+@dbname sysname,  
+@fileQuery nvarchar(max),  
+@DFDatabaseList nvarchar (1000),  
+@LFDatabaseList nvarchar (1000),  
+@DatabaseItem sysname,  
+@Position int,  
+@MountDrives bit,  
+@ConfigFlag int,  
+@now datetime ,  
+@ReadonyFlag bit,  
+@CurrentCommand nvarchar(max),  
+@CurrentCommand01 nvarchar(max),  
+@databaseID int,  
+@flag bit,  
+@version numeric (18,10),  
+@updflg tinyint  
+  
+SET @flag=0  
+  
+  
+CREATE TABLE  #ccdatabaseList  
+(  
+databaseID        int,  
+databaseName      sysname,  
+srvRole     tinyint,  
+allow_conn    tinyint,   
+scanStatus        bit  
+)  
+  
+  
+  
+--creating a temporary table to hold the powershell output  
+CREATE TABLE #output (line VARCHAR(255))  
+-- getting sql server version  
+SET @version = CAST(LEFT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(max)),CHARINDEX('.',CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(max))) - 1) + '.' + REPLACE(RIGHT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(max)), LEN(CAST(SERVERPROP
+ERTY('ProductVersion') AS nvarchar(max))) - CHARINDEX('.',CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(max)))),'.','') AS numeric(18,10))  
+-- Exit the procedure if the version is SQL Server 2000  
+  
+IF @version = 8.0  
+ BEGIN  
+     INSERT INTO SQLOPSDB.dbo.Tbl_Proc_Errors VALUES(0,0,0,'usp_CapacityMonitor',0,'Incompatible SQL Server Version',@now,0)  
+     EXEC master.dbo.xp_logevent 61001, 'Incompatible SQL Server Version', Error   
+  PRINT  'Incompatible SQL Server Version...'  
+     RETURN   
+ END  
+  
+-- This part was added to handle the changes to the AG replica connection changes..  
+  
+/*  
+Check if SQL Server is using Mount Drives.   
+This procedure will get the disk information using powershell if there are mount drives   
+Other wise it will use xp_fixeddrives  
+*/  
+  
+SELECT @now=GETDATE() -- initializing the current time to insert consistent execution start time in all the tables.  
+  
+  
+IF @version >= 10.502500  
+ BEGIN  
+  SET @sqlcmd= '  
+  INSERT INTO SQLOPSDB.dbo.TrackDiskSpace (DriveName,CapacityMB,FreeSpaceMB)  
+  SELECT distinct volume_mount_point, total_bytes/1048576, available_bytes/1048576  
+  FROM sys.master_files AS f  
+  CROSS APPLY sys.dm_os_volume_stats(f.database_id, f.file_id)'  
+  BEGIN TRY  
+   EXEC (@sqlcmd)  
+  END TRY  
+  BEGIN CATCH  
+   EXEC SQLOPSDB.dbo.usp_GetErrorInfo 'usp_CapacityMonitor',@now  
+   GOTO GC  
+  END CATCH   
+ END  
+ELSE  
+ BEGIN  
+  SELECT @MountDrives = Value FROM SQLOPSDB.dbo.Tbl_ToolsConfig WHERE ConfigItem='Mount Drives' AND ProcName='usp_MountDrivesCheck'  
+  IF @MountDrives=1  
+   BEGIN  
+    EXEC SQLOPSDB.dbo.set_Configuration 'xp_cmdshell',1,@ConfigFlag output  
+    SET @svrName = convert(VARCHAR(50),serverproperty('ComputerNamePhysicalNetBIOS'))  
+    SET @sql = 'powershell.exe -c "Get-WmiObject -ComputerName ' + QUOTENAME(@svrName,'''') + ' -Class Win32_Volume -Filter ''DriveType = 3'' | select name,capacity,freespace | foreach{$_.name+''|''+$_.capacity/1048576+''%''+$_.freespace/1048576+''*''}"' 
+ 
+    --inserting disk name, total space and free space value in to temporary table  
+      
+    BEGIN TRY  
+     INSERT INTO #output  
+     EXEC xp_cmdshell @sql  
+    END TRY  
+    BEGIN CATCH  
+     EXEC SQLOPSDB.dbo.usp_GetErrorInfo 'usp_CapacityMonitor',@now  
+     GOTO GC  
+    END CATCH  
+      
+    -- resetting the xp_cmdshell, if it is modified by usp_CapacityMonitor.  
+    IF @ConfigFlag=1  
+     EXEC set_Configuration 'xp_cmdshell',0,@ConfigFlag output  
+    -- get the free space details from xp_fixeddrives if powershell is not installed in the server.  
+    IF EXISTS (SELECT * FROM #output WHERE line like '%powershell.exe%')  
+     BEGIN  
+      INSERT SQLOPSDB.dbo.TrackDiskSpace (DriveName,FreeSpaceMB) EXEC master.dbo.xp_fixeddrives  
+     END  
+    ELSE  
+     BEGIN  
+        
+      --script to retrieve the values in MB from PS Script output  
+      INSERT INTO SQLOPSDB.dbo.TrackDiskSpace (DriveName,CapacityMB,FreeSpaceMB)  
+      SELECT rtrim(ltrim(SUBSTRING(line,1,CHARINDEX('|',line) -1))) as drivename  
+      ,round(cast(rtrim(ltrim(SUBSTRING(line,CHARINDEX('|',line)+1,  
+      (CHARINDEX('%',line) -1)-CHARINDEX('|',line)) )) as Float),0) as 'capacity(MB)'  
+      ,round(cast(rtrim(ltrim(SUBSTRING(line,CHARINDEX('%',line)+1,  
+      (CHARINDEX('*',line) -1)-CHARINDEX('%',line)) )) as Float),0) as 'freespace(MB)'  
+      FROM #output WHERE line like '[A-Z][:]%' and line not like '%RECYCLE.BIN%'  
+        
+     END  
+   END  
+  ELSE  
+   INSERT SQLOPSDB.dbo.TrackDiskSpace (DriveName,FreeSpaceMB) EXEC master.dbo.xp_fixeddrives  
+ END  
+-- Getting the Data and Transaction file size and space used.  
+  
+  
+SET @CurrentCommand = '  
+    INSERT INTO #ccdatabaseList (databaseID,databaseName,scanStatus)  
+ SELECT  database_id,name,0  
+    FROM    sys.databases  
+    WHERE state = 0  
+    AND user_access=0  
+    AND is_read_only=0  
+    AND is_in_standby=0  
+    AND database_id NOT IN (SELECT database_id    
+       FROM sys.database_recovery_status   
+       where database_guid IS NULL)' -- To Exclude databases in Transition.  
+  
+IF ((@version >=11) AND (SERVERPROPERTY('IsHadrEnabled') = 1))  
+ BEGIN  
+  SET @CurrentCommand= @CurrentCommand + ' AND replica_id IS NULL'  
+  SET @CurrentCommand01 = 'INSERT INTO #ccdatabaseList      
+  SELECT database_id,DB_NAME (database_id),rs.role,secondary_role_allow_connections,0  
+  FROM  sys.dm_hadr_availability_replica_states  rs  
+  INNER JOIN sys.dm_hadr_database_replica_states drs ON rs.replica_id= drs.replica_id  
+  INNER JOIN sys.availability_groups ag ON ag.group_id=rs.group_id  
+  INNER JOIN sys.availability_replicas ar ON ar.replica_id = rs.replica_id  
+  AND rs.role > 0   
+  AND rs.is_local =1   
+  AND database_state=0   
+  AND operational_state=2  
+  AND synchronization_state in (1,2)'  
+  
+  BEGIN TRY  
+   EXEC (@CurrentCommand01)  
+   DELETE FROM #ccdatabaseList WHERE srvRole=2 AND allow_conn=0  
+  END TRY  
+  BEGIN CATCH  
+   EXEC SQLOPSDB.dbo.usp_GetErrorInfo 'usp_CapacityMonitor',@now  
+   GOTO GC  
+  END CATCH   
+ END  
+  
+BEGIN TRY  
+ EXEC (@CurrentCommand)  
+END TRY  
+BEGIN CATCH  
+ EXEC SQLOPSDB.dbo.usp_GetErrorInfo 'usp_CapacityMonitor',@now  
+ GOTO GC  
+END CATCH   
+  
+  
+  
+IF EXISTS (SELECT * FROM #ccdatabaseList)  
+BEGIN  
+WHILE (SELECT COUNT(*) FROM #ccdatabaseList WHERE scanStatus = 0 ) > 0 -- get the database list  
+ BEGIN  
+  SELECT TOP 1 @databaseID = databaseID,@dbname = databaseName FROM #ccdatabaseList WHERE scanStatus = 0;  
+   
+  --query to get the space details for database files from sys.database_files dmv  
+  SET @fileQuery = '  
+  USE ' + QUOTENAME(@dbname) + '  
+  INSERT INTO SQLOPSDB.dbo.TrackFileInfo  
+  ( DBName,  
+   PhysicalName,  
+   FileGroupId,  
+   FileGroupName,  
+   FileType,  
+   TypeDesc,  
+   FileState,  
+   SizeMB,  
+   MaxSizeMB,  
+   Growth,  
+   NextGrowthIncMB,  
+   SpaceUsedMB,  
+   Is_Autogrow,  
+   Is_Read_Only,  
+   Is_Percent_Growth         
+  ) SELECT  db_name() dbname,  
+    physical_name,  
+    data_space_id,  
+    FILEGROUP_NAME(data_space_id) FileGroupName,  
+    type,  
+    CASE type WHEN  0 THEN ''DATA'' WHEN 1 THEN ''LOG'' END,  
+    state,  
+    ( size / 128.0 ) as sizeMB,  
+    case when max_size = -1 then -1   
+     when type = 1 and max_size = 268435456 then -1  
+     else ( max_size / 128) end as max_sizeMB,  
+    case is_percent_growth when 0 then ( growth / 128 )   
+     when 1 then growth  
+     else null end as growth,              
+    case is_percent_growth when 0 then ( growth / 128)   
+     when 1 then ( ( growth / 100.0 ) * size ) / 128   
+     else null end as nextGrowthIncMB,  
+    FILEPROPERTY( name, ''SpaceUsed'' ) / 128.0 AS SpaceUsedMB,  
+    case growth when 0 then 0 else 1 end as is_autogrow,  
+    is_read_only,  
+    is_percent_growth              
+   FROM sys.database_files  
+   WHERE type <= 1 AND state=0' -- This condition is to filter FILESTREAM and FULLTEXT File Types  
+          
+ BEGIN TRY  
+  EXEC ( @fileQuery )  
+ END TRY  
+ BEGIN CATCH  
+  IF ERROR_NUMBER() = 1205  
+   BEGIN  
+    UPDATE #ccdatabaseList SET scanStatus=1 WHERE databaseID = @databaseID  
+    EXEC SQLOPSDB.dbo.usp_GetErrorInfo 'CapacityMonitor',@now  
+    CONTINUE  
+   END  
+  IF ERROR_NUMBER() = 924  
+   BEGIN  
+    UPDATE #ccdatabaseList SET scanStatus=1 WHERE databaseID = @databaseID  
+    CONTINUE  
+   END  
+  
+  IF ERROR_NUMBER() = 952  
+   BEGIN  
+    UPDATE #ccdatabaseList SET scanStatus=1 WHERE databaseID = @databaseID  
+    CONTINUE  
+   END  
+  IF ERROR_NUMBER() = 983  
+   BEGIN  
+    UPDATE #ccdatabaseList SET scanStatus=1 WHERE databaseID = @databaseID  
+    CONTINUE  
+   END  
+  
+  EXEC SQLOPSDB.dbo.usp_GetErrorInfo 'usp_CapacityMonitor',@now  
+  GOTO GC  
+ END CATCH  
+  
+  UPDATE #ccdatabaseList SET scanStatus=1 WHERE databaseID = @databaseID  
+END -- end while  
+  
+  
+  
+-- loading  the space calculations to a table  
+INSERT INTO SQLOPSDB.dbo.DB_Fillup_Stats    
+SELECT    
+        DBName,  
+        PhysicalName,  
+        DriveName,  
+        DiskCapacityMB,  
+        DiskFreeSpaceMB,  
+        FileGroupId,  
+        FileGroupName,  
+        FileType,  
+        TypeDesc,  
+        CAST (SizeMB AS numeric(18,2)) SizeMb,  
+        CAST (SpaceUsedMB AS numeric(18,2)) SpaceUsedMB,  
+        MaxSizeMB,  
+        Growth,  
+        NextGrowthIncMB,  
+        Is_Autogrow,  
+        Is_Percent_Growth,  
+        CAST (NetAvailableSpace AS numeric(18,2)) NetAvailableSpace,  
+        CASE WHEN SpaceUsedMB > 0  
+             THEN CAST (  
+                  ( SpaceUsedMB/SizeMB ) * 100   
+                  AS numeric(18, 2)  
+                )  
+             ELSE NULL  
+        END AS PercentUsedSpace,  
+        CASE WHEN Is_Autogrow = 1 AND NextGrowthIncMB <= NetAvailableSpace   
+            THEN 'Yes'  
+            WHEN Is_Autogrow = 1 AND NextGrowthIncMB > NetAvailableSpace   
+            THEN 'No'  
+            ELSE 'Autogrow Off'   
+        END AS NextAutogrowFits,  
+          
+        CASE WHEN SpaceUsedMB > 0  
+             THEN CAST (  
+                  ( SpaceUsedMB/(SpaceUsedMB+NetAvailableSpace) ) * 100   
+                  AS numeric(18, 2)  
+                )  
+             ELSE NULL  
+        END AS PostGrowthUsagePer,  
+        @now CreatedDate,0 as ScanStatus  
+          
+      
+FROM    ( SELECT      
+                    fi.DBName,  
+                    fi.PhysicalName ,  
+                    ds.DriveName ,  
+                    ds.CapacityMB [DiskCapacityMB],  
+                    ds.FreeSpaceMB [DiskFreeSpaceMB],  
+                    fi.FileGroupId,  
+                    fi.FileGroupName,  
+                    fi.FileType,  
+                    fi.TypeDesc,  
+                    fi.SizeMB,  
+                    fi.SpaceUsedMB,  
+                    fi.MaxSizeMB,  
+                    fi.Growth,  
+                    fi.NextGrowthIncMB,  
+                    fi.Is_Autogrow,  
+                    fi.Is_Percent_Growth,  
+                    CASE   
+                -- Unlimited file size and autogrow ON: we're limited   
+                -- only by available OS disk space  
+                         WHEN fi.Is_Autogrow = 1  
+                              AND fi.MaxSizeMB = -1  
+                         THEN ( fi.SizeMB - fi.SpaceUsedMB )  -- remaining space inside the file  
+                              + ds.FreeSpaceMB                -- remaining space on the disk  
+                -- Limited file size and autogrow ON: we're limited by the lesser of   
+                -- available OS file space or max file size  
+                         WHEN fi.Is_Autogrow = 1  
+                              AND fi.MaxSizeMB != -1  
+                         THEN ( fi.SizeMB - fi.SpaceUsedMB )  -- remaining space inside the file  
+                              + ( CASE WHEN ( fi.MaxSizeMB - fi.SizeMB ) < ds.FreeSpaceMB  
+                                       THEN ( fi.MaxSizeMB - fi.SizeMB )  
+                                       ELSE ds.FreeSpaceMB  
+                                  END )        -- the lesser of hitting the max sql file size   
+                                            -- or exceeding remaining os disk space  
+                -- Autogrow OFF: we're limited by the existing file size  
+                         WHEN fi.Is_Autogrow = 0  
+                         THEN ( fi.SizeMB - fi.SpaceUsedMB )  -- remaining space inside the file  
+                         ELSE NULL  
+                    END AS NetAvailableSpace  
+          FROM      (   
+                    -- Correlate physical file paths to disks by comparing  
+                    -- OS disk caption to SQL Server physical file path  
+                    -- and finding the *longest* matching disk caption  
+                    SELECT      
+                                f.PhysicalName,  
+                                ( SELECT TOP 1  
+                                     DriveName  
+                                  FROM      SQLOPSDB.dbo.TrackDiskSpace d  
+                                  WHERE      f.PhysicalName LIKE d.DriveName + '%'  
+                                  ORDER BY  LEN(d.DriveName) DESC  
+                                ) AS [Disk]  
+                      FROM      SQLOPSDB.dbo.TrackFileInfo f  
+                    ) AS fileDisks  
+                    INNER JOIN SQLOPSDB.dbo.TrackFileInfo fi   
+                      ON fileDisks.PhysicalName = fi.PhysicalName  
+                           INNER JOIN SQLOPSDB.dbo.TrackDiskSpace ds   
+                      ON ds.DriveName = fileDisks.[Disk]  
+    
+        ) AS SpaceComputation  
+          
+  
+  
+-- Code to handle user defined database list /Thresholds  
+-- calling the usp_checkthreshold procedure with 0 and 1 parameters to alert the space issues  
+  
+IF (SELECT COUNT (*) FROM SQLOPSDB.dbo.Tbl_ParamCapacityMonitor) = 2  
+ BEGIN   
+  SELECT @DFDatabaseList = DB_IN_EX_List,@DFThreshold=Threshold FROM SQLOPSDB.dbo.Tbl_ParamCapacityMonitor where ProcType='Data File Capacity Monitor'  
+  SELECT @LFDatabaseList = DB_IN_EX_List,@LFThreshold=Threshold FROM SQLOPSDB.dbo.Tbl_ParamCapacityMonitor where ProcType='Log File Capacity Monitor'  
+ END  
+ELSE  
+ BEGIN  
+  SET @DFDatabaseList = NULL  
+  SET @LFDatabaseList = NULL  
+  SET @DFThreshold = 95  
+  SET @LFThreshold = 75  
+ END  
+  
+ BEGIN TRY  
+  EXEC SQLOPSDB.dbo.usp_CheckThreshold @DFDatabaseList,@DFThreshold,0,@now  
+  EXEC SQLOPSDB.dbo.usp_CheckThreshold @LFDatabaseList,@LFThreshold,1,@now   
+ END TRY  
+ BEGIN CATCH  
+  EXEC SQLOPSDB.dbo.usp_GetErrorInfo 'usp_CapacityMonitor',@now  
+  GOTO GC  
+ END CATCH  
+  
+IF EXISTS (SELECT * FROM Tbl_temp_dbnames)  
+ BEGIN  
+     
+  INSERT INTO SQLOPSDB.dbo.Tbl_DB_SpaceIssues   
+  SELECT * FROM SQLOPSDB.dbo.DB_Fillup_Stats WHERE ((PercentUsedSpace > @DFThreshold AND FileType=0) OR (PercentUsedSpace > @LFThreshold AND FileType=1))  
+  AND DBName IN (SELECT DISTINCT dbname FROM Tbl_temp_dbnames)  
+  EXCEPT  
+  SELECT * FROM SQLOPSDB.dbo.DB_Fillup_Stats WHERE ((PercentUsedSpace > @DFThreshold AND FileType=0 AND PostGrowthUsagePer < @DFThreshold) OR (PercentUsedSpace > @LFThreshold AND FileType=1 AND PostGrowthUsagePer < @LFThreshold))  
+  AND DBName IN (SELECT DISTINCT dbname FROM Tbl_temp_dbnames) and NextAutogrowFits='Yes'   
+ END  
+ELSE  
+ SET @flag=1  
+END  
+ELSE  
+ PRINT 'No qualified databases for capacity monitoring..'  
+  
+  
+GC:  
+  
+IF  EXISTS(SELECT ErrorNumber FROM SQLOPSDB.dbo.Tbl_Proc_Errors WHERE ErrorDate=@now AND ErrorProcedure='usp_CapacityMonitor')  
+BEGIN  
+ EXEC master.dbo.xp_logevent 61001, 'There were some execution errors while executing _SQL_CapacityMonitor , check SQLOPSDB.DBO.Tbl_Proc_Errors for more details...', Error   
+ PRINT 'There were some execution errors while executing usp_CapacityMonitor , check SQLOPSDB.dbo.Tbl_Proc_Errors for more details...'  
+END  
+ELSE  
+ IF @flag=1  
+  PRINT 'All databases have successfully passed data file and log file capacity check on ' + @@ServerName + ' with ' + cast (@DFThreshold as varchar(2)) +'%  &  ' + cast (@LFThreshold as varchar(2)) + '%  thresholds respectively.. '  
+  
+--drop/truncate the temporary table  
+TRUNCATE TABLE SQLOPSDB.dbo.DB_Fillup_Stats    
+TRUNCATE TABLE SQLOPSDB.dbo.TrackDiskSpace  
+TRUNCATE TABLE SQLOPSDB.dbo.TrackFileInfo  
+TRUNCATE TABLE SQLOPSDB.dbo.Tbl_temp_dbnames  
+DROP TABLE #ccdatabaseList  
+DROP TABLE #output 
+
+Virender123
+
+Blockings Query
+---------------
+
+SELECT
+db.name DBName,
+tl.request_session_id,
+wt.blocking_session_id,
+OBJECT_NAME(p.OBJECT_ID) BlockedObjectName,
+tl.resource_type,
+h1.TEXT AS RequestingText,
+h2.TEXT AS BlockingTest,
+tl.request_mode
+FROM sys.dm_tran_locks AS tl
+INNER JOIN sys.databases db ON db.database_id = tl.resource_database_id
+INNER JOIN sys.dm_os_waiting_tasks AS wt ON tl.lock_owner_address = wt.resource_address
+INNER JOIN sys.partitions AS p ON p.hobt_id = tl.resource_associated_entity_id
+INNER JOIN sys.dm_exec_connections ec1 ON ec1.session_id = tl.request_session_id
+INNER JOIN sys.dm_exec_connections ec2 ON ec2.session_id = wt.blocking_session_id
+CROSS APPLY sys.dm_exec_sql_text(ec1.most_recent_sql_handle) AS h1
+CROSS APPLY sys.dm_exec_sql_text(ec2.most_recent_sql_handle) AS h2
+
+
+_SQL_IndexFragmentationCollection Job failure with Cannot insert null value into the table Object_table Fix:
+-------------------------------------------------------------------------------------------------------------
+
+ALTER TABLE [dbo].[Tbl_IndexFragmentation] ADD  DEFAULT ((0)) FOR [object_name]
+GO
+
+MPLChanges
+
+Renaming the database
+---------------------
+
+select '#'+name+'#' from sys.sysdatabases
+
+select '#'+name+'#' from sys.sysaltfiles
+
+ALTER DATABASE MPLChanges MODIFY NAME = MPLChanges
+
+ALTER DATABASE MPLChanges
+SET SINGLE_USER
+WITH ROLLBACK IMMEDIATE
+
+ALTER DATABASE MPLChanges
+SET MULTI_USER
+
+Blocking Session
+----------------
+
+select * from sys.dm_exec_requests where session_id=67 ---------------> Blocking Information sqlhandle typing the SQL handle here
+select * from sys.dm_exec_requests where session_id=68 
+select * from sys.dm_exec_sql_text(0x03000B0020BEA3381B96590027A3000001000000000000000000000000000000000000000000000000000000)------->Blocking Information sqlhandle typing the SQL handle here
+select * from sys.dm_exec_sql_text(0x010001008B57C319C0A8C3280500000000000000000000000000000000000000000000000000000000000000)
+
+
+SELECT SERVERPROPERTY(‘productversion’), SERVERPROPERTY (‘productlevel’), SERVERPROPERTY (‘edition’)
+
+
+Quorum Vote Configuration:
+--------------------------
+
+Get-ClusterNode | fl Name, Nodeweight
+
+
+SQL Writer Issues:
+------------------
+
+<C:\Program Files\Microsoft SQL Server\80\Tools\Binn> --------> Adding the DLL file.
+
+C:\Windows\system32>regsvr32 "<C:\Program Files\Microsoft SQL Server\80\Tools\Binn\sqlvdi.dll" ----------> Adding the DLL File in cmd prompt.
+
+
+
+
+
+Log file full issue:
+
+
+
+dbcc sqlperf(logspace)  
+
+sp_helpdb CIS_Incubation 
+
+xp_fixeddrives 
+
+select log_reuse_wait_desc,* from sys.databases 
+
+dbcc opentran(CIS_Incubation) 
+
+dbcc inputbuffer(69)
+
+
