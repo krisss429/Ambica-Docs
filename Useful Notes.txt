@@ -1,0 +1,1977 @@
+To check the integrity of each and every DB ---
+
+EXEC sp_msforeachdb 'DBCC CHECKDB(''?'')' 
+
+To Rebuild the Index in each and every Table of a DB ---
+
+EXEC SP_MSFOREACHTABLE
+'
+print''?''
+
+DBCC DBREINDEX(''?''," ",80)
+'
+go
+sp_updatestats
+
+EXEC sp_MSforeachtable @command1="print '?' DBCC DBREINDEX ('?', ' ', 80)"
+
+Rebuilding Indexes with ALTER INDEX command ---
+
+EXEC sp_MSforeachtable @command1="print 'Rebuilding indexes for ?' ALTER INDEX ALL ON ? REBUILD WITH (FILLFACTOR = 80)"
+
+To update the Stats in each and every DB ---
+
+EXEC sp_MSForeachdb 'IF ''?'' <> ''master'' AND ''?'' <> ''model'' AND ''?'' <> ''msdb'' AND ''?'' <> ''tempdb''
+BEGIN
+EXEC sp_updatestats
+END
+'
+To Shrink the Logfiles of each and every DB  ---
+
+sp_MSForEachDb 'IF ''?'' NOT IN (''master'', ''tempdb'', ''tempdev'', ''model'', ''msdb'')
+AND (SELECT recovery_model FROM master.sys.databases WHERE name = ''?'') = 1
+AND (SELECT is_read_only FROM master.sys.databases WHERE name = ''?'') = 0
+BEGIN
+declare @LogFile nvarchar(2000)
+USE [?]
+SELECT @LogFile = sys.database_files.name
+FROM sys.database_files
+WHERE (sys.database_files.type = 1)
+PRINT @LogFile
+EXEC(''ALTER DATABASE [?] SET RECOVERY SIMPLE'')
+DBCC SHRINKFILE (@LogFile, 1)
+EXEC(''ALTER DATABASE [?] SET RECOVERY FULL'')
+END'
+
+Understanding "login failed" (Error 18456) error messages in SQL Server 2005 ---
+
+http://blogs.msdn.com/b/sql_protocols/archive/2006/02/21/536201.aspx
+
+Error: 40 – Could not open a connection to SQL Server ---
+
+http://blog.sqlauthority.com/2009/05/21/sql-server-fix-error-provider-named-pipes-provider-error-40-could-not-open-a-connection-to-sql-server-microsoft-sql-server-error/
+
+Notes on Transactional Replication ---
+
+http://www.sql-server-performance.com/articles/per/transactional_replication_2008_r2_p1.aspx
+
+http://www.exforsys.com/tutorials/sql-server-2005/sql-server-configuring-replication.html
+
+Logshiping Step by Step Method ---
+
+http://www.red-gate.com/supportcenter/Content?p=SQL%20Backup&c=SQL_Backup%5Carticles%5Csql_backup_log_shipping_standby_server.htm
+
+DBCC UPDATEUSAGE  ---
+
+In earlier versions of SQL Server, the values for the table and index row counts and page counts can become incorrect.  Therefore, databases that were created on versions prior to SQL Server 2005 may contain incorrect counts.  After you upgrade a database to SQL Server 2005, it is recommend that you run DBCC UPDATEUSAGE to correct any invalid counts. This DBCC statement corrects the rows, used pages, reserved pages, leaf pages and data page counts for each partition in a table or index. 
+
+You might encounter the following error when you run DBCC CHECKDB on your database and do not run DBCC UPDATEUSAGE after you attach your database.
+
+Error ---
+DBCC results for ‘table_name’.
+Msg 2508, Level 16, State 3, Line 1
+The In-row data RSVD page count for object “table_name”, index ID 0, partition ID 39755789369344, alloc unit ID 39755789369344 (type In-row data) is incorrect. Run DBCC UPDATEUSAGE.
+
+Syntax ---
+
+DBCC UPDATEUSAGE 
+    (    { 'database_name' | 0 } 
+        [ , { 'table_name' | 'view_name' } 
+        [ , { index_id | 'index_name' } ] ] 
+    ) 
+    [ WITH    [ COUNT_ROWS ] [ , NO_INFOMSGS ] 
+
+database_name' | 0 --
+
+Is the name of the database for which to report and correct space usage statistics. Database names must confirm to the rules for identifiers. For more information, see Using Identifiers. If 0 is specified, then the current database is used.
+
+'table_name' | 'view_name' --
+
+Is the name of the table or indexed view for which to report and correct space usage statistics. Table and view names must confirm to the rules for identifiers.
+
+index_id | 'index_name' --
+
+Is the identification (ID) number or index name of the index to use. If not specified, the statement processes all indexes for the specified table or view.
+
+For a Database ---
+
+DBCC updateusage('database_name')
+
+Result Sets ---
+DBCC UPDATEUSAGE returns this result set for the Northwind database (values may vary):
+
+DBCC UPDATEUSAGE: sysindexes row updated for table 'Orders' (index ID 4):
+        USED pages: Changed from (2) to (4) pages.
+        RSVD pages: Changed from (2) to (4) pages.
+DBCC UPDATEUSAGE: sysindexes row updated for table 'Orders' (index ID 5):
+        USED pages: Changed from (2) to (4) pages.
+        RSVD pages: Changed from (2) to (4) pages.
+'...'
+DBCC execution completed. If DBCC printed error messages, contact your system administrator.
+
+DBCC UPDATEUSAGE ('pubs') WITH NO_INFOMSGS  -- for 'Pubs' DB --> DB level
+GO
+
+DBCC UPDATEUSAGE ('pubs','authors') -- for 'authors' Table of 'Pubs' DB --> Table level
+GO
+
+DBCC UPDATEUSAGE ('pubs', 'authors', 'UPKCL_auidind') -- for 'UPKCL_auidind' index on 'authors' table of 'pubs' DB --> Index level
+
+Script to run UpdateUsage for multiple DBs ---
+
+declare @servername varchar(50), --variable to hold the servername
+    @dbname varchar(100), --variable to hold the database name
+    @command varchar(1000) --variable to hold the sql command
+
+-- set variables
+select @servername=@@servername
+
+-- declare the cursor
+declare dbccuu cursor for
+select name from master.dbo.sysdatabases
+    where  (status & 32 <> 32 and status & 128 <> 128 and status & 512 <> 512 and status & 1024 <> 1024 and status & 4096 <> 4096 and status & 2048 <> 2048)
+-- open the cursor
+open dbccuu
+
+-- fetch the first record into the cursor
+fetch dbccuu into @dbname
+
+-- while the fetch was successful
+while @@fetch_status=0
+begin
+    -- print the header for each database
+    print ''
+    print '***************************'
+    print 'DBCC UPDATEUSAGE For '+@DBNAME
+    print '***************************'
+    print ''
+
+    -- set the command to execute
+    set @command='dbcc updateusage('+@dbname+')'
+
+    -- execute the command
+    exec(@command)
+
+    -- fetch the next record into the cursor
+    fetch dbccuu into @dbname
+end
+
+---Job to perform the Backup of all Databases on a Server ---
+
+exec master..xp_cmdshell 'del C:\ePROFIELD\BACKUP\FULL\*.bak' (deletes the old backup everytime while performing a fresh Backup)
+
+go
+  
+exec master..sp_msforeachdb
+'  
+if ''?'' not in(''tempdb'')   
+backup database [?] to disk=''C:\ePROFIELD\BACKUP\FULL\?.bak'' 
+
+
+---Job to perform Backup on a Server and copy that backup to another Server ---
+
+exec master..XP_CMDSHELL 'COPY c:\ePROFIELD\BACKUP\FULL\*.bak \\Brdsql01\c$\BACKUP\BRDSQL01\Full\USDATDBS21\*.*'
+go
+exec master..XP_CMDSHELL 'DEL c:\ePROFIELD\BACKUP\FULL\*.bak' (deletes the old backup from Source Server everytime after the fresh Backup)
+
+EXEC master.dbo.xp_cmdshell 'xcopy E:\MSSQL\Backup\SomeBackupFile.BAK' \\DestinationServer\ShareName\'
+
+---Restore Command---
+
+
+RESTORE DATABASE Test   FROM DISK = 'E:\Test_db_BASELINE.BAK'
+WITH MOVE 'Test_dat' TO 'C:\MSSQL\SRVR2_Data\Test_Data.MDF', 
+MOVE 'Test_log' TO 'C:\MSSQL\SRVR2_Data\Test_Log.LDF'
+
+
+Tape Backup :
+------------
+
+In computers, tape backup is the ability to periodically copy the contents of all or a designated amount of data from its usual storage device to a tape cartridge device so that, 
+in the event of a hard disk crash or comparable failure, the data will not be lost. Tape backup can be done manually or, with appropriate software, be programmed to happen automatically. 
+A tape drive is a data storage device that reads and writes data on a magnetic tape. It is typically used for offline, archival data storage. Tape media generally has a favorable unit cost and long archival stability.
+
+A tape drive provides sequential access storage, unlike a disk drive, which provides random access storage. A disk drive can move its read/write head(s) to any random part 
+of the disk in a very short amount of time, but a tape drive must spend a considerable amount of time winding tape between reels to read any one particular piece 
+of data. As a result, tape drives have very slow average seek times. Despite the slow seek time, tape drives can stream data to and from tape very quickly. 
+For example, popular Linear Tape-Open drives can reach, as of 2010, continuous data transfer rates of up to 140 MB/s, which is comparable to hard disk drives.
+
+Tape Backup systems exist for needs ranging from backing up the hard disk on a personal computer to backing up large amounts of storage for archiving and 
+disaster recovery purposes in a large enterprise as part of a storage area network (SAN), usually combining a hardware and software package. 
+For personal computer tape backup, the Onstream USB tape drive is popular. For enterprise tape backup, Linear Tape-Open (LTO) is an industry open standard 
+from Hewlett-Packard, IBM, and Seagate. Tape backup also includes the ability to restore data that has been backed up back to hard disk storage devices when needed.
+
+What is User Acceptance Testing? 
+
+User Acceptance Testing is often the final step before rolling out the application. Usually the end users who will be using the applications test the 
+application before ‘accepting’ the application. This type of testing gives the end users the confidence that the application being delivered to 
+them meets their requirements. This testing also helps nail bugs related to usability of the application. 
+
+User Acceptance Testing – Prerequisites ---
+
+Before the User Acceptance testing can be done, the application is fully developed.  Various levels of testing (Unit, Integration and System) are already 
+completed before User Acceptance Testing is done. As various levels of testing have been completed most of the technical bugs have already been fixed before UAT.
+
+User Acceptance Testing – What to Test? 
+
+To ensure an effective User Acceptance Testing Test cases are created. These Test cases can be created using various use cases identified during the
+Requirements definition stage. The Test cases ensure proper coverage of all the scenarios during testing. 
+
+During this type of testing the specific focus is the exact real world usage of the application. The Testing is done in an environment that simulates 
+the production environment. The Test cases are written using real world scenarios for the application 
+
+User Acceptance Testing – How to Test? 
+
+The user acceptance testing is usually a black box type of testing. In other words, the focus is on the functionality and the usability of the application
+rather than the technical aspects. It is generally assumed that the application would have already undergone Unit, Integration and System Level Testing. 
+
+However, it is useful if the User acceptance Testing is carried out in an environment that closely resembles the real world or production environment. 
+
+The steps taken for User Acceptance Testing typically involves one or more of the following ---
+
+1) User Acceptance Test (UAT) Planning 
+2) Designing UA Test Cases 
+3) Selecting a Team that would execute the (UAT) Test Cases 
+4) Executing Test Cases 
+5) Documenting the Defects found during UAT 
+6) Resolving the issues/Bug Fixing 
+7) Sign Off 
+
+User Acceptance Test (UAT) Planning ---
+
+As always the Planning Process is the most important of all the steps. This affects the effectiveness of the Testing Process. The Planning process outlines 
+the User Acceptance Testing Strategy. It also describes the key focus areas, entry and exit criteria. 
+
+Sign Off ---
+
+Upon successful completion of the User Acceptance Testing and resolution of the issues the team generally indicates the acceptance of the application. This step is important in commercial software sales. Once the User “Accept” the Software delivered they indicate that the software meets their requirements.The users now confident of the software solution delivered and the vendor can be paid for the same. 
+
+Unhandled Execption ---
+
+An unhandled exception is an Exception that is thrown by execution but is never caught by the program, which results in a nasty Exception Stack. This could be avoided by catching the exception in a try-catch statement, but it is not always appropriate to catch every possible exception. Sometimes the exception is the result of the client making a mistake rather than something that occurred where it is thrown, therefore the client should be informed of the exception. But most of the time it is user friendly to not propagate exceptions.
+
+Useful Notes On In-Place Upgrade ---
+
+http://mscerts.programming4.us/sql_server/Destination%20%20SQL%20Server%202008%20or%20SQL%20Server%202008%20R2%20(part%202)%20-%20Upgrading%20In-Place.aspx
+
+Useful Notes On Side-By-Side Upgrade ---
+
+http://mscerts.programming4.us/sql_server/Destination%20%20SQL%20Server%202008%20or%20SQL%20Server%202008%20R2%20(part%201)%20-%20Side-by-Side%20Migration.aspx
+
+http://msdn.microsoft.com/en-us/library/ms144256.aspx
+
+Notes For The Versions which are Supported For Upgradation ---
+
+http://msdn.microsoft.com/en-us/library/ms143393.aspx
+
+Here is how we restore data from SQL 2008 to SQL 2005 ---
+
+1)mirror your SQL 2008 databases to another SQL 2008 instance
+
+2)break the mirroring at a point in time, you desire
+
+3) on the mirror RUN 
+
+RESTORE DATABASE DBName WITH RECOVERY 
+
+4) detach the database from your mirror server and move it to the sql 2005 instance and attach them...
+
+
+Script to create Stored Proc for "sp_help_revlogin" which is used to copy the Logins from one Server to another ---
+
+USE master
+GO
+IF OBJECT_ID ('sp_hexadecimal') IS NOT NULL
+  DROP PROCEDURE sp_hexadecimal
+GO
+CREATE PROCEDURE sp_hexadecimal
+    @binvalue varbinary(256),
+    @hexvalue varchar(256) OUTPUT
+AS
+DECLARE @charvalue varchar(256)
+DECLARE @i int
+DECLARE @length int
+DECLARE @hexstring char(16)
+SELECT @charvalue = '0x'
+SELECT @i = 1
+SELECT @length = DATALENGTH (@binvalue)
+SELECT @hexstring = '0123456789ABCDEF' 
+WHILE (@i <= @length) 
+BEGIN
+  DECLARE @tempint int
+  DECLARE @firstint int
+  DECLARE @secondint int
+  SELECT @tempint = CONVERT(int, SUBSTRING(@binvalue,@i,1))
+  SELECT @firstint = FLOOR(@tempint/16)
+  SELECT @secondint = @tempint - (@firstint*16)
+  SELECT @charvalue = @charvalue +
+    SUBSTRING(@hexstring, @firstint+1, 1) +
+    SUBSTRING(@hexstring, @secondint+1, 1)
+  SELECT @i = @i + 1
+END
+SELECT @hexvalue = @charvalue
+GO
+
+IF OBJECT_ID ('sp_help_revlogin') IS NOT NULL
+  DROP PROCEDURE sp_help_revlogin
+GO
+CREATE PROCEDURE sp_help_revlogin @login_name sysname = NULL AS
+DECLARE @name sysname
+DECLARE @type varchar (1)
+DECLARE @hasaccess int
+DECLARE @denylogin int
+DECLARE @is_disabled int
+DECLARE @PWD_varbinary  varbinary (256)
+DECLARE @PWD_string  varchar (514)
+DECLARE @SID_varbinary varbinary (85)
+DECLARE @SID_string varchar (514)
+DECLARE @tmpstr  varchar (1024)
+DECLARE @is_policy_checked varchar (3)
+DECLARE @is_expiration_checked varchar (3)
+
+DECLARE @defaultdb sysname
+ 
+IF (@login_name IS NULL)
+  DECLARE login_curs CURSOR FOR
+
+      SELECT p.sid, p.name, p.type, p.is_disabled, p.default_database_name, l.hasaccess, l.denylogin FROM 
+sys.server_principals p LEFT JOIN sys.syslogins l
+      ON ( l.name = p.name ) WHERE p.type IN ( 'S', 'G', 'U' ) AND p.name <> 'sa'
+ELSE
+  DECLARE login_curs CURSOR FOR
+
+
+      SELECT p.sid, p.name, p.type, p.is_disabled, p.default_database_name, l.hasaccess, l.denylogin FROM 
+sys.server_principals p LEFT JOIN sys.syslogins l
+      ON ( l.name = p.name ) WHERE p.type IN ( 'S', 'G', 'U' ) AND p.name = @login_name
+OPEN login_curs
+
+FETCH NEXT FROM login_curs INTO @SID_varbinary, @name, @type, @is_disabled, @defaultdb, @hasaccess, @denylogin
+IF (@@fetch_status = -1)
+BEGIN
+  PRINT 'No login(s) found.'
+  CLOSE login_curs
+  DEALLOCATE login_curs
+  RETURN -1
+END
+SET @tmpstr = '/* sp_help_revlogin script '
+PRINT @tmpstr
+SET @tmpstr = '** Generated ' + CONVERT (varchar, GETDATE()) + ' on ' + @@SERVERNAME + ' */'
+PRINT @tmpstr
+PRINT ''
+WHILE (@@fetch_status <> -1)
+BEGIN
+  IF (@@fetch_status <> -2)
+  BEGIN
+    PRINT ''
+    SET @tmpstr = '-- Login: ' + @name
+    PRINT @tmpstr
+    IF (@type IN ( 'G', 'U'))
+    BEGIN -- NT authenticated account/group
+
+      SET @tmpstr = 'CREATE LOGIN ' + QUOTENAME( @name ) + ' FROM WINDOWS WITH DEFAULT_DATABASE = [' + @defaultdb + ']'
+    END
+    ELSE BEGIN -- SQL Server authentication
+        -- obtain password and sid
+            SET @PWD_varbinary = CAST( LOGINPROPERTY( @name, 'PasswordHash' ) AS varbinary (256) )
+        EXEC sp_hexadecimal @PWD_varbinary, @PWD_string OUT
+        EXEC sp_hexadecimal @SID_varbinary,@SID_string OUT
+ 
+        -- obtain password policy state
+        SELECT @is_policy_checked = CASE is_policy_checked WHEN 1 THEN 'ON' WHEN 0 THEN 'OFF' ELSE NULL END FROM sys.sql_logins WHERE name = @name
+        SELECT @is_expiration_checked = CASE is_expiration_checked WHEN 1 THEN 'ON' WHEN 0 THEN 'OFF' ELSE NULL END FROM sys.sql_logins WHERE name = @name
+ 
+            SET @tmpstr = 'CREATE LOGIN ' + QUOTENAME( @name ) + ' WITH PASSWORD = ' + @PWD_string + ' HASHED, SID = ' + @SID_string + ', DEFAULT_DATABASE = [' + @defaultdb + ']'
+
+        IF ( @is_policy_checked IS NOT NULL )
+        BEGIN
+          SET @tmpstr = @tmpstr + ', CHECK_POLICY = ' + @is_policy_checked
+        END
+        IF ( @is_expiration_checked IS NOT NULL )
+        BEGIN
+          SET @tmpstr = @tmpstr + ', CHECK_EXPIRATION = ' + @is_expiration_checked
+        END
+    END
+    IF (@denylogin = 1)
+    BEGIN -- login is denied access
+      SET @tmpstr = @tmpstr + '; DENY CONNECT SQL TO ' + QUOTENAME( @name )
+    END
+    ELSE IF (@hasaccess = 0)
+    BEGIN -- login exists but does not have access
+      SET @tmpstr = @tmpstr + '; REVOKE CONNECT SQL TO ' + QUOTENAME( @name )
+    END
+    IF (@is_disabled = 1)
+    BEGIN -- login is disabled
+      SET @tmpstr = @tmpstr + '; ALTER LOGIN ' + QUOTENAME( @name ) + ' DISABLE'
+    END
+    PRINT @tmpstr
+  END
+
+  FETCH NEXT FROM login_curs INTO @SID_varbinary, @name, @type, @is_disabled, @defaultdb, @hasaccess, @denylogin
+   END
+CLOSE login_curs
+DEALLOCATE login_curs
+RETURN 0
+GO
+
+Step-by-step Notes on LogShipping ---
+
+http://mssqltips.com/tip.asp?tip=2301
+
+SQL Server 2008 R2 Build List ---
+
+http://www.sqlservercentral.com/articles/SQL+Server+2008+R2/70092/
+
+SCVMM ---
+
+> SCVMM stands for System Center Virtual Machine Manager. This tool is used to manage and administer multi vendor Virtual Machines. This tool can help converting Physical Servers to Virtual Machines, migrate virtual machines and managing resources for virtual machines and Hyper-V hosts.
+
+> It helps enable centralized management of physical and virtual IT infrastructure, increased server utilization, and dynamic resource optimization across multiple virtualization platforms. It includes end-to-end capabilities such as planning, deploying, managing, and optimizing the virtual infrastructure.
+
+Benefits Of SCVMM ---
+
+• Centrally creates and manages virtual machines across the entire datacenter 
+
+• Easily consolidates multiple physical servers onto virtual hosts
+
+• Rapidly provisions and optimizes new and existing virtual machines
+
+• Performance and Resource Optimization (PRO) enables the dynamic management of virtual resources through management packs that are PRO enabled. As an open and extensible platform, PRO encourages partners to design custom management packs that promote compatibility of their products and solutions with PRO's powerful management capabilities.
+
+> SCVMM is a System Center Virtual Machine Manager. This is used to manage virtual machine and hyper-V machines created by VMWare or Hyper-V Manager. This is a powerful tool and can be used to manage 
+
+- Virtual Machines
+- Physical to Virtual Machine conversion
+- Virtual to Virtual machine conversion
+- Virtual server migration
+- Administer resource utilization
+- SAN migration
+
+> Using SVCMM one can do live migration of servers. You can do storage migration having minimum downtime. It has capability for host comparability check. The Physical to Virtual (P2V) migration can be done using SCVMM. P2V migration is fast and reliable. This can be used as private cloud manager for your virtual server environment.
+
+The useful benefits of SCVMM are discribed in the below link ---
+
+http://www.microsoft.com/systemcenter/en/us/virtual-machine-manager/vmm-top-benefits-r2.aspx
+
+EXEC sp_configure 'show advanced', 1; 
+RECONFIGURE; 
+EXEC sp_configure 'allow updates', 0; 
+RECONFIGURE; 
+EXEC sp_configure 'Agent XPs', 1; 
+RECONFIGURE; 
+GO
+
+> To know the Data Size on a DB with unused space ---
+
+Exec sp_spaceused 
+
+> To know the Data Size on a Table with unused space ---
+
+Use DB
+Exec sp_spaceused 'tablename'
+
+Useful notes on MSDTC Cluster on Failover Clustering Server ---
+
+http://msdn.microsoft.com/en-us/library/ms189910.aspx
+
+http://technet.microsoft.com/en-us/library/cc774276(WS.10).aspx
+
+http://technet.microsoft.com/en-us/library/cc730992(WS.10).aspx
+
+http://social.technet.microsoft.com/Forums/en-US/winserverClustering/thread/848dd77c-3b47-426b-a690-618dad962482/
+
+SQL Server Failover Cluster (Setup) ---
+
+To install or upgrade a SQL Server failover cluster, you must run the Setup program on each node of the failover cluster. To add a node to an existing SQL Server failover cluster, you must run SQL Server Setup on the node that is to be added to the SQL Server failover cluster instance. Do not run Setup on the active node to manage the other nodes.
+
+The following options are available for SQL Server failover cluster installation ---
+
+Option1: Integration Installation with Add Node
+
+SQL Server integrated failover cluster installation consists of the following steps ---
+
+Create and configure a single-node SQL Server failover cluster instance. When you configure the node successfully, you have a fully functional failover cluster instance. At this point, it does not have high availability because there is only one node in the failover cluster.
+
+On each node to be added to the SQL Server failover cluster, run Setup with Add Node functionality to add that node.
+
+Option 2: Advanced/Enterprise Installation
+
+SQL Server Advanced/Enterprise failover cluster installation consists of the following steps ---
+
+On each node that will be a possible owner of the new SQL Server failover cluster that you are creating, follow the Prepare Failover Cluster setup steps that are listed in the Prepare section. After you run the Prepare Failover Cluster on one node, Setup creates the Configuration.ini file that lists all the settings that you specified. On the additional nodes to be prepared, instead of following these steps, you can supply the autogenerated Configuration.ini file from first node as an input to the Setup command line. This step prepares the nodes ready to be clustered, but there is no operational instance of SQL Server at the end of this step.
+
+After the nodes are prepared for clustering, run Setup on one of the prepared nodes, preferably on the node that owns the shared disk that has the Complete Failover Cluster functionality. This step configures and finishes the sfailover cluster instance. At the end of this step, you will have an operational SQL Server failover cluster instance and all the nodes that were prepared previously for that instance will be the possible owners of the newly created SQL Server failover cluster.
+
+Performing Diff. Backup for all User DBs ---
+
+exec master..xp_cmdshell 'del C:\BACKUP\BRDSQL01\DIFFERENTIAL\diff*.bak'
+
+go
+
+exec master..sp_msforeachdb    
+'    
+if ''?'' not in(''master'',''tempdb'')    
+backup database [?] to disk=''C:\BACKUP\BRDSQL01\DIFFERENTIAL\diff_?.bak''  with differential, format,skip
+exec xp_cmdshell ''del C:\BACKUP\BRDSQL01\LOG\log_?.bak''
+
+Configuring permissions for SQL Prompt (RedGate) ---
+
+For SQL Server 7 or SQL Server 2000, SQL Prompt requires administrative or dbo or Sys Admin permissions.
+For SQL Server 2005 you can use the same permissions as for SQL Server 7/2000 or alternatively you can use the GRANT VIEW DEFINITION TO [{username}] (DB Level) which provides SQL Prompt with permission to retrieve the metadata without giving dbo access.
+
+For SQL Server 2008, it may be necessary to grant VIEW SERVER STATE (Server Level) to access information about encryption keys otherwise a 'User does not have permission to perform this action' message may prevent the display of candidates.
+
+Notes On GRANT Server Permissions ---
+
+http://msdn.microsoft.com/en-us/library/ms186717.aspx
+
+Notes On RedGate ---
+
+http://www.red-gate.com/supportcenter/Content?c=knowledgebase%5CSQL_Prompt%5CKB200708000141.htm&p=SQL%20Prompt
+
+Shrinking all the DBs at a time (from Simple to Full Recovery Model) ---
+
+EXEC sp_MSForEachDB 
+'IF ''?'' NOT IN (''master'', ''model'', ''msdb'', ''tempdb'')
+begin
+declare @sql varchar(4000)
+set @sql = ''alter database ''+ ''?'' + '' set recovery simple ''
+set @sql = @sql + ''dbcc shrinkdatabase( ''+ ''?'' + '',0)''
+set @sql =@sql+ ''alter database ''+ ''?'' + '' set recovery full ''
+exec(@sql)
+end
+'
+
+Shrinking the Logfiles of all the DBs ---
+
+CREATE proc [dbo].[USP_DATABASES_SHRINKLOG]    
+as    
+begin    
+set nocount on    
+exec sp_MSforeachdb   
+'  
+if "?" in (select sys.databases.name as dbname  from sys.sysaltfiles  join sys.databases   
+on sys.databases. database_id = sys.sysaltfiles.dbid   
+where   sys.sysaltfiles.fileid = 2 and sys.sysaltfiles.dbid BETWEEN 5 AND 54 and sys.databases.state_desc="ONLINE") begin  
+  use[?]    
+  declare @name varchar(100)  
+  declare @sql varchar(4000)  
+  select @name = name from sys.sysaltfiles where fileid = 2 and dbid = db_id("?")  
+  print @name  
+  set @sql = ''alter database ''+ ''?'' + '' set recovery simple ''  
+  set @sql =@sql+ "dbcc shrinkfile"+"("+"''" + @name + "''"+",0)"  
+  set @sql =@sql+ ''alter database ''+ ''?'' + '' set recovery full ''  
+  print @sql   
+  exec (@sql)  
+ end   
+'  
+set nocount off    
+end
+
+Simple Recovery Model ---
+
+The simple recovery model is just that: simple. In this approach, SQL Server maintains only a minimal amount of information in the transaction log. SQL Server truncates the transaction log each time the database reaches a transaction checkpoint, leaving no log entries for disaster recovery purposes. 
+
+In databases using the simple recovery model, you may restore full or differential backups only. It is not possible to restore such a database to a given point in time, you may only restore it to the exact time when a full or differential backup occurred. Therefore, you will automatically lose any data modifications made between the time of the most recent full/differential backup and the time of the failure. 
+
+Full Recovery Model ---
+
+The full recovery model also bears a self-descriptive name. With this model, SQL Server preserves the transaction log until you back it up. This allows you to design a disaster recovery plan that includes a combination of full and differential database backups in conjunction with transaction log backups. 
+
+In the event of a database failure, you have the most flexibility restoring databases using the full recovery model. In addition to preserving data modifications stored in the transaction log, the full recovery model allows you to restore a database to a specific point in time. For example, if an erroneous modification corrupted your data at 2:36AM on Monday, you could use SQL Server’s point-in-time restore to roll your database back to 2:35AM, wiping out the effects of the error. 
+
+Bulk-Logged Recovery Model ---
+
+The bulk-logged recovery model is a special-purpose model that works in a similar manner to the full recovery model. The only difference is in the way it handles bulk data modification operations. The bulk-logged model records these operations in the transaction log using a technical known as minimal logging. This saves significantly on processing time, but prevents you from using the point-in-time restore option. 
+
+Microsoft recommends that the bulk-logged recovery model only be used for short periods of time. Best practice dictates that you switch a database to the bulk-logged recovery model immediately before conducting bulk operations and restore it to the full recovery model when those operations complete.
+
+Performing Backup (Full & Diff.), Archiving and then copying that archive file to another Server ---
+
+For Full Backup ----
+
+Step 1 : Full Backup of all the DBs
+Step 2 : 
+
+DECLARE @SERVER VARCHAR(100), @COMMAND VARCHAR(100), @FILE VARCHAR(100) 
+SET @SERVER = @@servername
+set @COMMAND  = 'C:\"Program Files"\WinRAR\WinRAR.exe A F:\BACKUP\FULL.rar F:\BACKUP\FULL'
+EXEC XP_CMDSHELL @COMMAND
+
+go
+EXEC master..xp_cmdshell 'xcopy "F:\BACKUP\FULL.rar" "\\usdatbrs01.brand.com\e$\GROUPSHARE\BACKUP\usdatvms13" /Y'
+go
+EXEC master..xp_cmdshell 'del "F:\BACKUP\FULL.rar"'
+
+For Diff. Backup --
+
+Step 1 : Diff. Backup of all the DBs
+Step 2 :
+
+DECLARE @SERVER VARCHAR(100), @COMMAND VARCHAR(100), @FILE VARCHAR(100) 
+SET @SERVER = @@servername
+set @COMMAND  = 'C:\"Program Files"\WinRAR\WinRAR.exe A F:\BACKUP\DIFFERENTIAL.rar F:\BACKUP\DIFFERENTIAL'
+EXEC XP_CMDSHELL @COMMAND
+
+go
+EXEC master..xp_cmdshell 'xcopy "F:\BACKUP\DIFFERENTIAL.rar" "\\usdatbrs01.brand.com\e$\GROUPSHARE\BACKUP\usdatvms13" /Y'
+go
+EXEC master..xp_cmdshell 'del "F:\BACKUP\DIFFERENTIAL.rar"'
+
+Script to change the Compatibility of all the DBs ---
+
+sp_msforeachDB
+'
+alter database ? set compatibility_level=100
+'
+
+Updating an existing Column values with  new values ---
+
+update A set  a.oldcost=B.oldcost
+ from Our_job_cleanup_stock A join Our_job_cleanup_stock_update  B on a.item=b.item 
+
+FAQs for DBA --- 
+
+http://www.indiabix.com/database/data-and-database-administration/
+
+Data Compression ---
+
+Data Compression in SQL Server has been made available in SQL Server 2005 with Service Pack 2 where a new storage format for storing decimal and numeric data was introduced. The vardecimal storage format allows decimal and numeric data types to be stored as a variable-length column. This concept has been extended in SQL Server 2008 to all fixed-legth data types such as integer, char, and float data types. Data compression reduces the storage costs and increases query performance by reducing I/O and increasing buffer-hit rates 
+
+SQL Server 2008 supports both row and page compression for both tables and indexes. Here's how these two types of data compression differ
+
+ROW Compression --
+
+This compression feature takes into account the variable data type structures defining a column. Take, for instance, a CHAR(100) column stored in a variable length storage format will only use up the amount of storage defined by the data. Storing "SQL Server 2008 " in the column will only require storing fifteen characters instead of the full 100 characters, thereby, a 85% savings on storage space. This is the extension of the vardecimal storage format made available in SQL Server 2005 Service Pack 2. Note, also, that this compression feature does not take any disk space for zero or null values.
+
+PAGE Compression --
+
+This compression feature is a superset of ROW compression and takes into account the redundant data in one or more rows on a given page. It also uses prefix and dictionary compression. What this simply means is that for both page compression techniques, the storage engine cuts down on repeated data in the page. For example, if a table is partitioned using a column prefix, all data in a specific partition will have the same or similar prefix. Let's say the value of columns start with something like A1000Q-xxxx like some product codes, the storage engine store the A1000Q- once on the page and then refer to this value from all other occurrences of this value on the same page. This can also be said of a column with a defined DEFAULT constraint. Page compression only occurs when the page is full to optimize the performance. 
+
+While it may appear that data compression would reduce the size of your tables or indexes, it is best to first evaluate the estimated space savings in a table or index by using either the sp_estimate_data_compression_savings system stored procedure or the Data Compression Wizard. You also might want to check if the existing data is fragmented as you might be able to reduce the size of the index by rebuilding it instead of using compression.
+
+To enable Compression on an existing non-partitioned table  --
+
+ALTER TABLE Sales.SalesOrderDetail 
+REBUILD WITH (DATA_COMPRESSION = ROW)
+
+Suspect Mode---
+
+Sometimes when we connect to the database server, we may find it in suspect mode. The database server won’t allow to perform any operation on that database until the database is repaired. 
+
+A database can go in suspect mode for many reasons like improper shutdown of the database server, corruption of the database files etc.
+
+To get the reason of a database going into suspect mode can be found using the following query ---
+
+DBCC CHECKDB (‘YourDBname’) WITH NO_INFOMSGS, ALL_ERRORMSGS
+
+Steps to recover the DB from Suspect Mode ---
+
+EXEC sp_resetstatus ‘DBname’; 
+
+ALTER DATABASE DBname SET EMERGENCY 
+
+DBCC checkdb(‘DBname’) 
+
+ALTER DATABASE DBname SET SINGLE_USER WITH ROLLBACK IMMEDIATE 
+
+DBCC CheckDB (‘DBname’, REPAIR_ALLOW_DATA_LOSS) 
+
+ALTER DATABASE DBname SET MULTI_USER
+
+We should keep one thing in mind while using the above queries that the repair mode used here, REPAIR_ALLOW_DATA_LOSS, is a one way operation i.e. once the database is repaired all the actions performed by these queries can’t be undone. There is no way to go back to the previous state of the database. So as a precautionary step you should take backup of your database before executing above mentioned queries.
+
+Correlated Subquery --- 
+
+A query is called correlated subquery when both the inner query and the outer query are interdependent. For every row processed by the inner query, the outer query is processed as well. The inner query depends on the outer query before it can be processed.
+
+SELECT p.product_name FROM product p
+WHERE p.product_id = (SELECT o.product_id FROM order_items o
+WHERE o.product_id = p.product_id);
+
+NOTE:
+1) You can nest as many queries you want but it is recommended not to nest more than 16 subqueries in oracle.
+2) If a subquery is not dependent on the outer query it is called a non-correlated subquery.
+
+DDL Triggers for Created, Altered and Dropped DBs  ---
+
+The below script creates a Table with the name "ddl_EventLog" which records each DDL operations done on any DB of the respective server
+
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+SET ANSI_PADDING ON
+GO
+
+CREATE TABLE [dbo].[ddl_EventLog](
+	[ID] [int] IDENTITY(1,1) NOT NULL,
+	[EventTime] [datetime] NULL,
+	[EventType] [varchar](15) NULL,
+	[ServerName] [varchar](25) NULL,
+	[DatabaseName] [varchar](25) NULL,
+	[ObjectType] [varchar](25) NULL,
+	[ObjectName] [varchar](25) NULL,
+	[LoginName] [varchar](30) NULL,
+	[CommandText] [varchar](max) NULL
+) ON [PRIMARY]
+
+GO
+
+SET ANSI_PADDING OFF
+GO
+
+----
+
+
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+Create TRIGGER [trg_dropdatabase_log]
+ON ALL SERVER -- Create Server DDL Trigger
+FOR DROP_DATABASE,alter_database,create_database -- Trigger will raise when dropping a database
+
+AS
+SET NOCOUNT ON
+
+DECLARE @xmlEventData XML
+
+-- Capture the event data that is created
+SET @xmlEventData = eventdata()
+
+-- Insert information to a EventLog table.
+-- Make sure the database and table exists and that the script points to the right database and table.
+
+INSERT INTO master.dbo.ddl_EventLog
+(
+EventTime,
+EventType,
+ServerName,
+DatabaseName,
+ObjectType,
+ObjectName,
+LoginName,
+CommandText
+)
+SELECT REPLACE(CONVERT(VARCHAR(50), @xmlEventData.query('data(/EVENT_INSTANCE/PostTime)')),'T', ' '),
+CONVERT(VARCHAR(15), @xmlEventData.query('data(/EVENT_INSTANCE/EventType)')),
+CONVERT(VARCHAR(25), @xmlEventData.query('data(/EVENT_INSTANCE/ServerName)')),
+CONVERT(VARCHAR(25), @xmlEventData.query('data(/EVENT_INSTANCE/DatabaseName)')),
+CONVERT(VARCHAR(25), @xmlEventData.query('data(/EVENT_INSTANCE/ObjectType)')),
+CONVERT(VARCHAR(15), @xmlEventData.query('data(/EVENT_INSTANCE/objectname)')),
+convert(varchar(20),suser_sname()),
+CONVERT(VARCHAR(MAX), @xmlEventData.query('data(/EVENT_INSTANCE/TSQLCommand/CommandText)'))
+
+GO
+
+Truncate Table ---
+
+TRUNCATE TABLE is functionally identical to DELETE statement with no WHERE clause: both remove all rows in the table. But TRUNCATE TABLE is faster and uses fewer system and transaction log resources than DELETE. 
+
+The DELETE statement removes rows one at a time and records an entry in the transaction log for each deleted row. TRUNCATE TABLE removes the data by deallocating the data pages used to store the table's data, and only the page deallocations are recorded in the transaction log.
+
+TRUNCATE TABLE removes all rows from a table, but the table structure and its columns, constraints, indexes and so on remain. The counter used by an identity for new rows is reset to the seed for the column. If you want to retain the identity counter, use DELETE instead. If you want to remove table definition and its data, use the DROP TABLE statement.
+
+use DBname
+truncate table 'tablename'
+
+You cannot use TRUNCATE TABLE on a table referenced by a FOREIGN KEY constraint; instead, use DELETE statement without a WHERE clause. Because TRUNCATE TABLE is not logged, it cannot activate a trigger. 
+
+TRUNCATE TABLE may not be used on tables participating in an indexed view
+
+Database Mail ---
+
+Database Mail is used to send the Email using SQL Server. Database mail is the replacement of the SQLMail with many enhancements. So one should stop using the SQL Mail and upgrade to the Database Mail. 
+
+In order to send mail using Database Mail in SQL Server, there are 3 basic steps that need to be carried out. 1) Create Profile and Account 2) Configure Email 3) Send Email.
+
+Once the Profile and Account has been created, we need to configure the Database Mail. To configure, we need to enable the Database Mail XPs parameter through the sp_configure stored procedure, as shown here:
+
+sp_CONFIGURE 'show advanced', 1
+GO
+RECONFIGURE
+
+then 
+
+sp_CONFIGURE 'Database Mail XPs', 1
+GO
+RECONFIGURE
+GO 
+
+Send Email step --
+
+After all configurations are done, we are now ready to send an email. To send mail, we need to execute a stored procedure sp_send_dbmail and provide the required parameters as shown below:
+
+USE msdb
+GO
+EXEC sp_send_dbmail @profile_name='Profilename',
+@recipients='test@Example.com',
+@subject='Test message',
+@body='This is the body of the test message'
+
+To set up SQL Server Agent to use Database Mail ---
+
+1.In Object Explorer, expand server.
+
+2.Right-click SQL Server Agent, and then click Properties.
+
+3.Click Alert System.
+
+4.Select Enable Mail Profile.
+
+5.In the Mail system list, select Database Mail.
+
+6.In the Mail profile list, select a mail profile for Database Mail.
+
+7.Restart SQL Server Agent.
+
+http://blog.sqlauthority.com/2008/08/23/sql-server-2008-configure-database-mail-send-email-from-sql-database/
+
+Useful Notes On Snapshot DB -
+
+http://msdn.microsoft.com/en-us/library/ms175158.aspx
+
+http://technet.microsoft.com/en-us/library/ms175511.aspx
+
+Notes on changing path for System DBs ---
+
+http://www.sp-configure.com/how-to-change-path-of-system-databases-on-sql-2005/
+
+http://msdn.microsoft.com/en-us/library/ms345408(v=sql.90).aspx
+
+Query To fetch Active Directory information from Sql Server ---
+
+After creating Linked server ADSI from any server and then execute the below query to get AD inforamtion 
+
+ select * from openquery(ADSI, 'SELECT    CN
+FROM         ''LDAP://spserver/DC=local,DC=dhanush''
+WHERE     objectClass = ''USER''')
+
+Script to Grant permissions to all the Procs in a DB ---
+
+Select 'GRANT "role name" on '+'   to username'
+name  from sys.procedures where [type] = 'P' and is_ms_shipped = 0 and [name] not like 'sp[_]%diagram%'
+
+Script to Grant permissions to all the Views in a DB ---
+
+Select 'GRANT "role name" on '+'   to username'
+name  from sys.views where [type] = 'P' and is_ms_shipped = 0 and [name] not like 'sp[_]%diagram%'
+
+To decrease or increase the file sizes for a DB (Data & Log) ---
+
+ALTER DATABASE tempdb MODIFY FILE   
+(NAME = 'tempdev', SIZE = in MB)
+
+ALTER DATABASE tempdb MODIFY FILE
+(NAME = 'templog', SIZE = target_size_in_MB)
+
+Changing Collation for a Column ---
+
+ALTER TABLE Tablename ALTER COLUMN Columnname varchar(10) COLLATE Latin1_General_CI_AS NOT NULL
+
+Boost Sql Server Priority ---
+
+Use the priority boost option to specify whether Microsoft SQL Server should run at a higher Microsoft Windows 2000, Windows 2003, Windows 2008 or Windows 2008R2 scheduling priority than other processes on the same computer. If we set this option to 1, SQL Server runs at a priority base of 13 in Windows 2000, Windows 2003, Windows 2008 or Windows 2008R2 scheduler. The default is 0, which is a priority base of 7.
+
+We can Enable the "Boost SQL Server Priority" option to allow SQL Server threads to run in the real time priority class. When running at this priority level, SQL Server threads will be executed before all other process threads running in the lower variable priority class. This implies that on single processor machines under heavy load and not dedicated to SQL Server, other processes may not get enough attention. However, if the system is dedicated to SQL Server and disk I/O activity tends to be heavy, then we should Enable this option to get substantial performance gains.
+
+Raising the priority too high may drain resources from essential operating system and network functions, resulting in problems shutting down SQL Server or using other operating system tasks on the server. The priority boost option is an advanced option. If we are using sp_configure procedure to change the setting, we can change priority boost only when show advanced options is set to 1. The setting takes effect after the server is restarted.
+
+DDL Triggers --- Server Level (for Dropping, Creating and Altering the DBs) ---
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TRIGGER [DDL_SERVERLEVEL_AlterDatabase]
+ON ALL SERVER 
+for Alter_DATABASE 
+--ddl_server_level_events
+--FOR DROP_DATABASE,alter_database,create_database -- Trigger will raise when dropping a database
+AS
+SET NOCOUNT ON
+
+DECLARE @xmlEventData XML
+SET @xmlEventData = eventdata()
+
+INSERT INTO master.dbo.ddl_EventLog
+(
+EventTime,
+EventType,
+ServerName,
+DatabaseName,
+ObjectType,
+ObjectName,
+LoginName,
+CommandText
+)
+SELECT REPLACE(CONVERT(VARCHAR(max), @xmlEventData.query('data(/EVENT_INSTANCE/PostTime)')),'T', ' '),
+CONVERT(nVARCHAR(max), @xmlEventData.query('data(/EVENT_INSTANCE/EventType)')),
+CONVERT(nVARCHAR(max), @xmlEventData.query('data(/EVENT_INSTANCE/ServerName)')),
+CONVERT(nVARCHAR(max), @xmlEventData.query('data(/EVENT_INSTANCE/DatabaseName)')),
+CONVERT(nVARCHAR(max), @xmlEventData.query('data(/EVENT_INSTANCE/ObjectType)')),
+CONVERT(nVARCHAR(max), @xmlEventData.query('data(/EVENT_INSTANCE/objectname)')),
+convert(nvarchar(max),suser_sname()),
+cast(CONVERT(nVARCHAR(MAX), @xmlEventData.query('data(/EVENT_INSTANCE/TSQLCommand/CommandText)')) as nvarchar(max))
+
+GO
+
+SET ANSI_NULLS OFF
+GO
+
+SET QUOTED_IDENTIFIER OFF
+GO
+
+ENABLE TRIGGER [DDL_SERVERLEVEL_AlterDatabase] ON ALL SERVER
+GO
+
+Insert the Records from other DB Table to Temp. Table ---
+
+select  * into #temp from 'Tablename'
+
+Script to get the Row Counts of all the Tables of a DB ---
+
+USE DBname
+GO
+CREATE TABLE #temp (
+table_name sysname ,
+row_count INT,
+reserved_size VARCHAR(50),
+data_size VARCHAR(50),
+index_size VARCHAR(50),
+unused_size VARCHAR(50))
+SET NOCOUNT ON
+INSERT #temp
+EXEC sp_msforeachtable 'sp_spaceused ''?'''
+SELECT a.table_name,
+a.row_count,
+COUNT(*) AS col_count,
+a.data_size
+FROM #temp a
+INNER JOIN information_schema.columns b
+ON a.table_name collate database_default
+= b.table_name collate database_default
+GROUP BY a.table_name, a.row_count, a.data_size
+ORDER BY CAST(REPLACE(a.data_size, ' KB', '') AS integer) DESC
+DROP TABLE #temp
+
+Compatibility Level set to SQL Server 2008 (100) ---
+
+> Compatibility Level effects SQL syntax and query parsing, and should have no impact of performance. Setting the Compatibility Level to a value of SQL Server 2008(100) will take advantage of new T-SQL features. Compatibility level only refers to the T-SQL language compatibility level so generally there isn't a performance hit unless you are using some code that has been superseded by a far superior method, in which case the engine might not be as optimized for the old code.
+> New functionality might work under older compatibility levels, but SET options might require adjustments. For example, using the xml data type under compatibility level 80 requires appropriate ANSI SET options. Also, when the database compatibility level is set to 90 or higher, setting ANSI_WARNINGS to ON implicitly sets ARITHABORT to ON. If the database compatibility level is set to 80, the ARITHABORT option must explicitly be set to ON.
+> When a stored procedure executes, it uses the current compatibility level of the database in which it is defined. When the compatibility setting of a database is changed, all of its stored procedures are automatically recompiled accordingly. This was setup so we could migrate our databases to a later release of SQL Server without having to worry about the application breaking.
+
+To know the RowCount of all the Tables of a DB ---
+
+USE AdventureWorks
+GO
+SELECT OBJECT_NAME(OBJECT_ID) TableName, st.row_count
+FROM sys.dm_db_partition_stats st
+WHERE index_id < 2
+ORDER BY st.row_count DESC
+
+-- create custom database role
+CREATE ROLE db_executor
+
+-- grant EXECUTE permission
+GRANT EXECUTE TO db_executor
+ 
+-- add security account to the role
+exec sp_addrolemember 'db_executor', 'YourSecurityAccount'
+
+---Script to find the Failed Jobs on the Server ---
+
+DECLARE @PreviousDate datetime 
+DECLARE @Year VARCHAR(4) 
+DECLARE @Month VARCHAR(2) 
+DECLARE @MonthPre VARCHAR(2) 
+DECLARE @Day VARCHAR(2) 
+DECLARE @DayPre VARCHAR(2) 
+DECLARE @FinalDate INT 
+
+-- Initialize Variables 
+SET @PreviousDate = DATEADD(dd, -7, GETDATE()) -- Last 7 days 
+SET @Year = DATEPART(yyyy, @PreviousDate) 
+SELECT @MonthPre = CONVERT(VARCHAR(2), DATEPART(mm, @PreviousDate)) 
+SELECT @Month = RIGHT(CONVERT(VARCHAR, (@MonthPre + 1000000000)),2) 
+SELECT @DayPre = CONVERT(VARCHAR(2), DATEPART(dd, @PreviousDate)) 
+SELECT @Day = RIGHT(CONVERT(VARCHAR, (@DayPre + 1000000000)),2) 
+SET @FinalDate = CAST(@Year + @Month + @Day AS INT) 
+
+-- Final Logic 
+SELECT j.[name], 
+s.step_name, 
+h.step_id, 
+h.step_name, 
+h.run_date, 
+h.run_time, 
+h.sql_severity, 
+h.message, 
+h.server 
+FROM msdb.dbo.sysjobhistory h 
+INNER JOIN msdb.dbo.sysjobs j 
+ON h.job_id = j.job_id 
+INNER JOIN msdb.dbo.sysjobsteps s 
+ON j.job_id = s.job_id
+AND h.step_id = s.step_id
+WHERE h.run_status = 0 -- Failure 
+AND h.run_date > @FinalDate 
+ORDER BY h.instance_id DESC
+
+Grant Permissions to the User to run SQL Profiler ---
+
+USE master 
+GO 
+GRANT ALTER TRACE TO username; 
+GO
+
+If the permission needs to be revoked ---
+
+USE master 
+GO 
+DENY ALTER TRACE TO username; 
+GO
+
+Script to find the Row Counts of a particular Table ---
+
+SELECT OBJECT_NAME(OBJECT_ID) TableName, st.row_count
+FROM sys.dm_db_partition_stats st
+WHERE index_id < 2 and OBJECT_NAME(OBJECT_ID) like 'Tablename%'
+ORDER BY st.row_count DESC
+
+Script to Grant Exec or View Definition or Alter Permissions to User ---
+
+select   'GRANT EXECUTE ON dbo.' + name + ' TO Username'
+from     sys.objects
+where  type  =  'P'
+order by  name
+
+P -- for Stored Procs
+
+Once we get the Procs details, copy the required statements and execute in another Query Window. So that the particular User will get the permissions on the required Procs or all the Procs.
+
+Notes On Linked Server :
+
+http://technet.microsoft.com/en-us/library/ms188477.aspx
+
+Script to shrink the Data files of all the DBs ---
+
+declare @DFname varchar(100),@DBname varchar(100),@sql varchar(1000)
+declare mdffile cursor
+for
+select df.name,db.name from sysaltfiles Df join sysdatabases Db on Df.dbid=Db.dbid
+ where groupid>=1 and db.dbid >6  
+open mdffile
+fetch next from mdffile into @Dfname,@DBname
+select @Dfname,@DBname
+while @@FETCH_STATUS=0
+begin
+set @sql='use '+@DBname+''
+set @sql=@sql+' dbcc shrinkfile('+@Dfname+')'
+fetch next from mdffile into @Dfname,@DBname
+print @sql
+exec(@sql)
+end
+close mdffile
+deallocate mdffile
+
+> Database Diagrams ---
+
+The Database Designer is a visual tool that allows you to design and visualize a database to which you are connected. When designing a database, you can use Database Designer to create, edit, or delete tables, columns, keys, indexes, relationships, and constraints. To visualize a database, you can create one or more diagrams illustrating some or all of the tables, columns, keys, and relationships in it.
+
+For any database, you can create as many database diagrams as you like; each database table can appear on any number of diagrams. Thus, you can create different diagrams to visualize different portions of the database, or to accentuate different aspects of the design. For example, you can create a large diagram showing all tables and columns, and you can create a smaller diagram showing all tables without showing the columns.
+
+SQL Server database diagrams are powerful tool, before illustrating some of the tasks and issues it would be better to present a list of major concepts
+
+•You can use only tables in SQL Server database diagrams. No other SQL Server objects are allowed to be accessed from the diagram editor. 
+•Tables in the database diagram are not independent. Any modification in tables through this tool will directly affect the table architecture in the database. 
+•Also if you modify any table outside the diagram editor, the changes will automatically be updated in any saved diagrams. 
+•Any operation that may be implemented on a table by opening it in table designer of SSMS can also be implemented through using database diagrams. And such updates would be reflected in the tables architecture. Examples of such tasks are index creation, constraints and relationships. 
+•Users that are owner of a database or member of the db_owner database role can view all of the diagrams. Other users can view only their own diagrams and they can create new diagrams with certain limitation according to permissions they have in the database 
+•There is no undo or redo facility provided in SSMS diagram editor. 
+•Currently there is no method provided by Microsoft for migration of SQL Server database diagrams from one instance to another or from one database to another. However you may copy diagrams to some other file format and save it as backup. 
+•Diagrams can directly be printed using the print option in the file menu of SSMS. You can use the arrange tables and page break options in the diagram editor for better alignment of diagrams on a page for printing.. 
+•You can change the owner of SQL Server database diagram just like any other SQL Server object. You may have to perform such operations if the owner of a diagram is deleted for any reason. 
+•You may change NULL values setting or data type of any column through database diagrams. 
+•After an upgrade of a database, database diagrams are usable in the new version. 
+•It will not be mentioned throughout this tutorial, but along with accessing options through right clicks, you may also access these through the Database Diagrams menu in SSMS
+
+> Script to insert multiple records into a Table with incremental ---
+
+declare @id int
+set @id=0
+while @id<1000000
+begin
+insert into Tablename values(@id,'abcdefgh','dhanush')
+set @id=@id+1
+
+end
+
+> Link for SQL Server versions and Builds ---
+
+http://sqlserverbuilds.blogspot.com/
+
+Script To get the DB and Object details which has impact of any DB or object or anything ---
+
+Create table #test_find (dbname varchar(1000),object_namea varchar(1000),typea char(4))
+
+exec sp_MSforeachdb '
+use ?
+insert into #test_find
+select ''?'',   a.name,a.type  from   sys.objects a    join syscomments b on a.object_id=b.id 
+where text like ''%usdatdbs16%'' '
+ 
+select distinct dbname,object_namea,typea   from #test_find
+
+Drop table #test_find
+
+> Script to Grant permissions for checking the processes which are ruuning on the Server --
+
+Grant View Server sate to "loginname"
+
+> Link for Using SQL Server 2012 T-SQL New Features --
+
+http://www.codeproject.com/Articles/265760/Using-SQL-Server-2011-T-SQL-New-Features
+
+> Link for different Permissions on Server Level --
+
+http://msdn.microsoft.com/en-us/library/ms186717.aspx
+
+> Script to Shrink the Log files of all the DBs on the Server --
+
+exec sp_msforeachdb
+'
+if ''?'' like ''ces_%'' 
+begin
+use [?]
+DBCC SHRINKFILE (N''ces_default_Log'' , 0)
+
+end
+'
+--------
+
+sp_MSforeachdb "use [?] DBCC SHRINKFILE (N'(select name from [?].dbo.sysfiles where fileid=1)' , 0, TRUNCATEONLY)"
+
+-----
+
+Script to find the jobs of a Server in which the other Servers will be used (pulling the data)
+
+use msdb
+select distinct b.name from sysjobsteps a join sysjobs b on a.job_id=b.job_id and b.enabled=1 where command like '%servername%' order by name
+
+------------
+
+Script to Enable or Disable the jobs on a Server 
+
+use MSDB
+begin tran
+update sysjobs
+set enabled=0 or 1
+where name in ('jobname')
+end
+
+-----
+
+SQL Server Builds ---
+
+http://sqlserverbuilds.blogspot.in/#sql2008r2
+
+------
+
+SQL Server 2008 R2 articles, fixes and updates ---
+
+http://kbupdate.info/sql-server-2008-r2-2011-07.php
+
+----------
+
+Script to attach the DB (using single file & batch files) ---
+
+exec sp_attach_single_file_db @dbname = 'BATCH',@physname = N'D:\BACKUP\BATCH_DATA';
+
+exec sp_attach_db @dbname = 'BATCH',@filename1  = N'D:\BACKUP\BATCH_DATA.MDF', @filename2 =  N'D:\BACKUP\BATCH_log.LDF'
+
+---------------
+
+Link for Performance Counters --- 
+
+http://sqlserverplanet.com/sql-optimization/performance-counters
+
+http://www.sqlserverfaq.net/2011/01/31/what-perfmon-counters-should-i-monitor-and-what-each-of-them-mean/
+
+-------------
+
+Troubleshooting SQL Server Slowness
+
+http://sqlserverplanet.com/troubleshooting/sql-server-slowness/
+
+---------------
+
+Command to get the list of all Objects & related Counters (to monitor the performance of Server) ---
+
+C:\Documents and Settings\servername\typeperf -qx
+
+> Once got the list of all the Counters, we can copy them into a text file with the following command --
+
+C:\Documents and Settings\servername\typeperf -qx >D:\counters.txt
+
+> Once counters got copied to textfile, we can keep the counters into a Txt file (which we need to monitor). Then we can create a job to monitor those specific no. of counters and report will be copied to a CSV file (we need to mention the destination path) -- Command is --
+
+EXEC xp_cmdshell 'typeperf -cf "D:\counters.txt" -si 300 -f csv -o "D:\perf.csv" -s usdatdbs22.beis.com'
+
+> To check whether the task is successfully running or not
+
+C:\Documents and Settings\servername>tasklist
+
+> To cancel the job, we need to use the below command from Command Prompt --
+
+C:\Documents and Settings\servername\taskkill /im typeperf.exe /f
+
+> To know about each & every option in the script
+
+C:\Documents and Settings\servername>typeperf /?
+
+> We can set the output in various formats like CSV (Comma Seperated Value), TSV (Tab Seperated Value), BIN (Binary Format) & SQL (SQL Server)
+------------------
+
+Transactions/Sec Counter Of Databases Object :
+
+The performance counter Transactions/Sec describes the number of transactions started for the database per second. In your stored procedure, there are multiple transactions. The code you have changed can change the number of transactions, so the Transactions/sec performance counter value will change correspondingly. For example, you could modify the stored procedure code to combine more than one transactions into one, so the Transactions /Sec rate comes down.
+
+--------------------
+
+Query to get the Data of Logins, Objects, DBs and Servernames i.e. DDL operations or any other operations applied on the DB ---
+
+DECLARE @D1 DATETIME;
+DECLARE @DIFF INT;
+DECLARE @CURR_TRACEFILENAME VARCHAR(500);
+DECLARE @BASE_TRACEFILENAME VARCHAR(500);
+DECLARE @INDX INT ;
+DECLARE @TEMP_TRACE TABLE (
+ OBJ_NAME NVARCHAR(256) COLLATE DATABASE_DEFAULT
+, DATABASE_NAME NVARCHAR(256) COLLATE DATABASE_DEFAULT
+, START_TIME DATETIME
+, EVENT_CLASS INT
+, EVENT_SUBCLASS INT
+, OBJECT_TYPE INT
+, SERVER_NAME NVARCHAR(256) COLLATE DATABASE_DEFAULT
+, LOGIN_NAME NVARCHAR(256) COLLATE DATABASE_DEFAULT
+, APPLICATION_NAME NVARCHAR(256) COLLATE DATABASE_DEFAULT
+, DDL_OPERATION NVARCHAR(40) COLLATE DATABASE_DEFAULT
+);
+
+SELECT @CURR_TRACEFILENAME = PATH FROM SYS.TRACES WHERE IS_DEFAULT = 1 ;
+SET @CURR_TRACEFILENAME = REVERSE(@CURR_TRACEFILENAME)
+SELECT @INDX = PATINDEX('%\%', @CURR_TRACEFILENAME)
+SET @CURR_TRACEFILENAME = REVERSE(@CURR_TRACEFILENAME)
+SET @BASE_TRACEFILENAME = LEFT(@CURR_TRACEFILENAME,LEN(@CURR_TRACEFILENAME) - @INDX) + '\LOG.TRC';
+
+INSERT INTO @TEMP_TRACE
+SELECT OBJECTNAME
+, DATABASENAME
+, STARTTIME
+, EVENTCLASS
+, EVENTSUBCLASS
+, OBJECTTYPE
+, SERVERNAME
+, LOGINNAME
+, APPLICATIONNAME
+, 'TEMP'
+FROM ::FN_TRACE_GETTABLE( @BASE_TRACEFILENAME, DEFAULT )
+WHERE EVENTCLASS IN (46,47,164) AND EVENTSUBCLASS = 0 AND
+DATABASEID <> 2
+
+UPDATE @TEMP_TRACE SET DDL_OPERATION = 'CREATE' WHERE EVENT_CLASS = 46
+UPDATE @TEMP_TRACE SET DDL_OPERATION = 'DROP' WHERE EVENT_CLASS = 47
+UPDATE @TEMP_TRACE SET DDL_OPERATION = 'ALTER' WHERE EVENT_CLASS = 164
+
+SELECT 
+  DDL_OPERATION
+, OBJ_NAME
+, DATABASE_NAME
+, START_TIME
+, SERVER_NAME
+, LOGIN_NAME
+, APPLICATION_NAME
+FROM @TEMP_TRACE  ORDER BY START_TIME DESC
+
+--------------------
+
+Script to get all the Jobs details on a Server 
+
+USE DB
+GO
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+--select * from msdb.dbo.sysjobs
+--select * from msdb.dbo.sysjobsteps
+--select * from msdb.dbo.sysjobstepslogs
+--select * from msdb.dbo.sysschedules
+--select * from msdb.dbo.sysjobschedules
+--select * from msdb.dbo.sysjobs_view
+--select * from msdb.dbo.sysjobactivity
+
+ALTER procedure [dbo].[usdatdbc01_jobs_details]
+as
+begin
+insert into Tablename (to which we would like to add the records)            
+select sj.name,
+case sj.enabled
+     when 1 then 'Enabled'
+     else 'Disabled' end as "Job Ena or Disable",
+case ss.enabled 
+     when 1 then 'enabled'
+     else 'Disabled' end as "Job Schedule Ena or Dis",
+case ss.freq_type 
+            when 1   then   'One time only' 
+   when 4   then   'Daily'
+   when 8   then   'Weekly'
+   when 16  then   'Monthly'
+   when 32  then   'Monthly'
+   when 64  then   'Runs when the SQL Server Agent service starts'
+   when 128 then   'Runs when the computer is idle'
+   else 'user defined freq_type' 
+    end as freq_type,
+       case   
+       when ss.freq_type=1 and ss.freq_interval =0 then 'freq_interval is unused'
+       when ss.freq_type=4                         then 'Every freq_interval days'
+       when ss.freq_type=8 and ss.freq_interval =1 then 'Sunday'
+       when ss.freq_type=8 and ss.freq_interval =2 then 'Monday'
+       when ss.freq_type=8 and ss.freq_interval =4 then 'Tuesday'
+       when ss.freq_type=8 and ss.freq_interval =8 then 'Wednesday'
+       when ss.freq_type=8 and ss.freq_interval =16 then 'Thusday'
+       when ss.freq_type=8 and ss.freq_interval =32 then 'Friday'
+       when ss.freq_type=8 and ss.freq_interval =64 then 'Saturday' 
+       when ss.freq_type=16 and ss.freq_interval =1 then 'On the freq_interval day of the month'
+       when ss.freq_type=32 and ss.freq_interval =1 then 'Sunday'
+       when ss.freq_type=32 and ss.freq_interval =2 then 'Monday'
+       when ss.freq_type=32 and ss.freq_interval =3 then 'Tuesday'
+       when ss.freq_type=32 and ss.freq_interval =4 then 'Wednesday'
+       when ss.freq_type=32 and ss.freq_interval =5 then 'Thursday'
+       when ss.freq_type=32 and ss.freq_interval =6 then 'Friday'
+       when ss.freq_type=32 and ss.freq_interval =7 then 'Saturday'
+       when ss.freq_type=32 and ss.freq_interval =8 then 'Day'
+       when ss.freq_type=32 and ss.freq_interval =9 then 'Weekday'
+       when ss.freq_type=32 and ss.freq_interval =10 then 'Weekend day'
+    when ss.freq_type=32 and ss.freq_interval =10 then 'Weekend day'
+    when ss.freq_type=64  then 'starts when SQL Server Agent service starts'
+    when ss.freq_type=128  then 'runs when computer is idle'
+    end as freq_interval,
+    case freq_subday_type 
+            when 1 then 'At the specified time'
+            when 2 then 'Seconds'
+            when 4 then 'Minutes'
+            when 8 then 'Hours'
+            else '***'
+            end as freq_subday_type,
+       ss.active_start_date,
+       MONITORINGTOOL.[dbo].[JOBS_TIME_CONVERT](ss.active_start_time,12) active_start_time,
+       MONITORINGTOOL.[dbo].[JOBS_TIME_CONVERT](ss.active_end_time,12) active_end_time, 
+       --ss.active_end_date, 
+       sjst.last_run_date,
+         cast(sjst.last_run_duration/10000 as varchar) +':'+CAST(sjst.last_run_duration/100%100 as varchar) +':'+ CAST(sjst.                    last_run_duration%100 as varchar) as last_run_duration,
+         case sjst.last_run_outcome
+         when 0 then 'failed'
+         when 1 then 'Succeeded'
+         when 2 then 'Retry'
+         when 3 then 'Canceled'
+         when 5 then 'Unknown' end as last_run_outcome,
+         sjs.next_run_date ,
+         MONITORINGTOOL.[dbo].[JOBS_TIME_CONVERT](sjs.next_run_time ,12) next_run_time,
+         convert (varchar(100),getdate(),112)  
+
+from [usdatdbc01.beis.com].msdb.dbo.sysschedules  ss 
+                     inner join [usdatdbc01.beis.com].msdb.dbo.sysjobschedules sjs on ss.schedule_id=sjs.schedule_id
+                  inner join [usdatdbc01.beis.com].msdb.dbo.sysjobs sj on sjs.job_id=sj.job_id
+                  inner join [usdatdbc01.beis.com].msdb.dbo.sysjobsteps sjst on sjst.job_id=sj.job_id
+
+end
+GO
+
+--------------------
+
+Proc To Restore Multiple DBs @ a time
+---------------------------------------------
+
+CREATE TABLE #OriginalFileList (
+Col1 varchar(1000) NULL
+)
+
+
+DECLARE @CMD1 varchar(5000) 
+DECLARE @CMD2 varchar(5000)
+DECLARE @FilePath varchar(200) 
+
+-- 4 - Initialize the variables
+SELECT @CMD1 = ''
+SELECT @CMD2 = '' 
+SELECT @FilePath = 'E:\DISK5\STAGING\APPLICATIONBACKUP'
+
+-- 5 - Build the string to capture the file names in the restore location
+SELECT @CMD1 = 'master.dbo.xp_cmdshell ' + char(39) + 'dir ' + @FilePath + '\*.bak' + char(39)
+
+-- 6 - Build the string to populate the #OriginalFileList temporary table
+SELECT @CMD2 = 'INSERT INTO #OriginalFileList(Col1)' + char(13) +
+'EXEC ' + @CMD1
+
+-- 7 - Execute the string to populate the #OriginalFileList table
+EXEC (@CMD2)
+
+-- 8 - Delete unneeded data from the #OriginalFileList
+DELETE FROM #OriginalFileList
+WHERE COL1 IS NULL
+
+DELETE FROM #OriginalFileList
+WHERE COL1 LIKE '%Volume%'
+
+DELETE FROM #OriginalFileList
+WHERE COL1 LIKE '%Directory%'
+
+DELETE FROM #OriginalFileList
+WHERE COL1 LIKE '%<DIR>%'
+
+DELETE FROM #OriginalFileList
+WHERE COL1 LIKE '%bytes%'
+ 
+
+DECLARE @DBNAME VARCHAR(1000),
+   @QRY VARCHAR(1000),
+   @DBID INT ,
+   @LOGNAME VARCHAR(1000),
+  
+   @FROM VARCHAR(1000)='E:\DISK5\STAGING\APPLICATIONBACKUP\'
+ DECLARE  CUR 
+   CURSOR 
+   FOR 
+   SELECT DATABASE_ID,NAME ,BACKUPNAME
+    FROM usdatdbc01.master.SYS.DATABASES A  
+    JOIN 
+    ( SELECT 
+  substring(substring(col1,charindex('Profield',col1),len(col1)) , 
+  1,CHARINDEX('_backup',substring(col1,charindex('Profield',col1),len(col1)))-1
+  ) DBNAME ,
+  substring(col1,charindex('Profield',col1),len(col1)) BACKUPNAME   FROM #OriginalFileList WHERE COL1 like '%Profield%') B ON A.name=B.DBNAME
+     WHERE (NAME LIKE 'PROFIELD%')
+     ORDER BY NAME
+ OPEN CUR
+ FETCH NEXT FROM CUR INTO @DBID,@DBNAME ,@LOGNAME
+ WHILE @@FETCH_STATUS=0
+ BEGIN  
+   
+   SET @QRY = 'RESTORE DATABASE '+@DBNAME+'
+        FROM DISK = '''+@FROM+''+@LOGNAME+''' 
+        WITH replace'
+       
+     SELECT @DBNAME  
+ --  EXEC( @QRY  )
+ print @qry
+        FETCH NEXT FROM CUR INTO @DBID,@DBNAME ,@LOGNAME
+        END 
+        CLOSE CUR
+        DEALLOCATE CUR  
+
+-
+exec sp_msforeachdb
+'
+use ?
+if exists ( select * from master.dbo.sysdatabases where name like ''Profield_%'' and name=''?'') 
+begin -------------------
+drop user [BRAND\DS_USDATDBC01_DO]
+drop user [BRAND\DS_USDATDBC01_DR]
+drop user [LINKUSER_INT_R]
+exec sp_change_users_login ''update_one'',''Profield_compare'',''Profield_compare''
+create user [BRAND\DS_USDATDBS28_DR] for login [BRAND\DS_USDATDBS28_DR]
+	EXEC sp_addrolemember N''db_datareader'', N''BRAND\DS_USDATDBS28_DR''
+create user [BRAND\DS_USDATDBS28_DO] for login [BRAND\DS_USDATDBS28_DO]
+	EXEC sp_addrolemember N''db_owner'', N''BRAND\DS_USDATDBS28_DO''
+end 
+' 
+
+----------------------
+
+Script to get the No. Of Connections/Logins information on a Server --
+
+  
+CREATE PROCEDURE USP_GET_USERCONNECTIONS_INFO   
+AS  
+---**************** CREATED BY : CNU (29-06-2012)**************  
+---DESC : THIS WILL LOADED USER CONNECTIONS INFORMATION INTO USER_CONNECTIONS_COUNTER TABLE .   
+BEGIN   
+SET NOCOUNT ON   
+  
+IF NOT EXISTS (SELECT * FROM SYSOBJECTS WHERE NAME ='USER_CONNECTIONS_COUNTER')  
+
+BEGIN  
+ 
+ CREATE TABLE [DBO].[USER_CONNECTIONS_COUNTER](  
+ [HOST_NAME] [NVARCHAR](128) NULL,  
+ [NET_TRANSPORT] [NVARCHAR](40) NOT NULL,  
+ [PROTOCOL_TYPE] [NVARCHAR](40) NULL,  
+ [LOGIN_NAME] [NVARCHAR](128) NOT NULL,  
+ [NT_DOMAIN] [NVARCHAR](128) NULL,  
+ [LOGIN_TIME] [DATETIME] NOT NULL,  
+ [IPADDRESS] [VARCHAR](48) NULL,  
+ [PROGRAM_NAME] [NVARCHAR](128) NULL,  
+ [APPLICATIONNAME] [NVARCHAR](32) NULL,  
+ [DBID] [SMALLINT] NULL,  
+ [NAME] [SYSNAME] NULL,  
+ [OBJECTID] [INT] NULL,  
+ [NUMBER OF CONNECTIONS] [INT] NULL,  
+ [SQLTEXT] [NVARCHAR](MAX) NULL  
+) ON [PRIMARY]  
+END   
+  
+INSERT INTO DBO.USER_CONNECTIONS_COUNTER  
+SELECT   
+   
+HOST_NAME,  
+NET_TRANSPORT,  
+PROTOCOL_TYPE,  
+LOGIN_NAME,  
+NT_DOMAIN,  
+LOGIN_TIME,  
+C.CLIENT_NET_ADDRESS AS IPADDRESS,  
+PROGRAM_NAME,  
+CLIENT_INTERFACE_NAME AS APPLICATIONNAME,  
+DBID,  
+DB.NAME,  
+OBJECTID,  
+COUNT(DISTINCT C.SESSION_ID) [NUMBER OF CONNECTIONS] ,   
+T.TEXT  AS SQLTEXT   
+   
+FROM   
+      MASTER.SYS.DM_EXEC_CONNECTIONS C  
+INNER JOIN  MASTER.SYS.DM_EXEC_SESSIONS  S ON C.SESSION_ID=S.SESSION_ID  
+OUTER APPLY MASTER.SYS.DM_EXEC_SQL_TEXT(C.MOST_RECENT_SQL_HANDLE) T   
+LEFT JOIN   MASTER.SYS.DATABASES DB ON DB.DATABASE_ID=DBID   
+WHERE LOGIN_TIME> (SELECT MAX(LOGIN_TIME) FROM DBO.USER_CONNECTIONS_COUNTER)  
+GROUP BY   
+HOST_NAME,  
+NET_TRANSPORT,  
+PROTOCOL_TYPE,  
+LOGIN_NAME,  
+NT_DOMAIN,  
+LOGIN_TIME,  
+C.CLIENT_NET_ADDRESS,  
+PROGRAM_NAME,  
+CLIENT_INTERFACE_NAME,  
+DBID,  
+OBJECTID,  
+T.TEXT,  
+DB.NAME  
+  
+--SELECT CONVERT(VARCHAR,LOGIN_TIME,112),NAME DBNAME  ,LOGIN_NAME,PROGRAM_NAME, COUNT(*) NOOFCONNECTIONS   
+--FROM USER_CONNECTIONS_COUNTER   
+--GROUP BY CONVERT(VARCHAR,LOGIN_TIME,112),LOGIN_NAME,PROGRAM_NAME,NAME  
+  
+  
+END
+
+> Once the Proc has been created, we need to create a job to dump the data into a Table
+
+---------------------
+
+> Script to create Snapshot of a DB --
+
+create database Gudi_SS on (name='Gudi',filename='D:\Gudi_SS.mdf') as snapshot of Gudi
+
+> To restore the DB from its Snapshot (which overrides the updates on Source DB, as the Snapshot contains only the data when it has been created) --
+
+restore database Gudi from database_snapshot='Gudi_SS'
+
+------------------------
+
+> Script to modify the path of File (Data or Log)
+
+alter database DBname modify file (name='Logicalname',filename='new path where we would like to keep the file')
+
+-------------------------
+
+> To change the Schema of a Table (from Old Schem to new one)
+
+alter schema  newone transfer oldschema.tablename
+
+--------------------
+
+> To add & drop Primary Key on a Column
+
+ALTER TABLE employee
+ADD CONSTRAINT Pkey PRIMARY KEY (eid)
+
+
+ALTER TABLE employee
+DROP CONSTRAINT Pkey PRIMARY KEY
+
+--------------------
+
+> To set Not Null on a Column
+
+ALTER TABLE dbo.employee
+ALTER COLUMN ename VARCHAR(10)NOT NULL
+
+---------------------
+
+> Dumping the data from One Table to another
+
+SELECT * INTO emp1 FROM dbo.employee
+
+> Inserting data to a new Table
+
+INSERT INTO emp1 SELECT * FROM dbo.employee
+
+---------------------
+
+> Command for Left Join 
+
+SELECT A.EID,A.ENAME FROM
+ EMP1 A
+LEFT JOIN 
+DBO.EMPLOYEE B
+ON A.EID=B.EID
+
+-------------------------
+
+> SQLAgent roles :
+
+SQLAgentUserRole 
+
+-- Ability to manage Jobs that they own
+
+SQLAgentReaderRole 
+
+-- All of the SQLAgentUserRole rights 
+-- The ability to review multiserver jobs, their configurations and history
+
+SQLAgentOperatorRole
+
+-- All of the SQLAgentReaderRole rights 
+-- The ability to review operators, proxies and alerts
+-- Execute, stop or start all local jobs 
+-- Delete the job history for any local job
+-- Enable or disable all local jobs and schedules
+
+--------------------------------------------------------
+ 
+ALTER ENDPOINT Mirroring
+AS TCP (Listener_Port = 5023)
+
+CREATE ENDPOINT Mirroring 
+STATE=STARTED 
+AS TCP (LISTENER_PORT=5023) 
+FOR DATABASE_MIRRORING (ROLE=PARTNER)
+
+-----------------------------------
+
+I/O Wait On a Server:
+
+The concept of I/O wait is very important, and, unfortunately, many application owners and DBAs do not completely understand what it is or how to measure it. This is probably the most important concept to understand when evaluating the I/O performance of your storage. Since I/O wait will be mentioned in many of the future topics to be discussed in the I/O Storm blog, I’ll offer this definition and explanation.
+
+I/O wait is the total time that working processes are blocked, waiting for the I/O operation to complete. Do not confuse I/O wait with the duration time of I/O operations. An I/O operation is a request to retrieve or write data to the storage. The total time that it takes to complete all I/O operations is I/O operation time. To calculate the I/O wait, we need to understand how much time the application was blocked, waiting for all I/O operation to complete
+
+------------------------------------------------------------
+
+http://social.msdn.microsoft.com/Forums/en/sqldatabaseengine/thread/40ed9ecf-2a66-4e78-abdc-727601ad4f4e
+
+http://www.mssqltips.com/sqlservertip/2402/sql-server-replication-interview-questions/
+
+-------------------------------------------------------------
+> Checklist for Server Health ---
+
+use master
+GO
+Create Procedure usp_Databases_Health_Checks
+as
+begin  set nocount on
+print '1- checking databases statuses and size'
+exec sp_helpDB
+print '2- checking log files usage...'
+DBCC SQLPERF ('LOGSPACE')
+print '3- checking global parameters...'
+exec sp_monitor
+print '4- checking configuration parameters...'
+exec sp_configure'show advanced options',1
+reconfigure with override
+exec sp_configure
+exec sp_configure'show advanced options',0
+reconfigure with override
+print '5- checking locks...'
+exec sp_Lock
+print'6- checking processes...'
+exec sp_who2
+print ' 7- checking databases allocation using dbcc checkdb on all databases...'
+exec sp_MsForEachDB @command1='DBCC CHECKDB (*)', @replacechar='*'
+set nocount off
+END 
+GO
+
+-------------------------------------------------
+
+> SELECT  name AS 'Database_Name' ,
+ 
+        snapshot_isolation_state AS 'Allow Snapshot Isolation' ,
+ 
+        is_ansi_null_default_on AS 'ANSI NULL Default' ,
+ 
+        is_ansi_nulls_on AS 'ANSI NULLS Enabled' ,
+ 
+        is_ansi_padding_on AS 'ANSI Paddings Enabled' ,
+ 
+        is_ansi_warnings_on AS 'ANSI Warnings Enabled' ,
+ 
+        is_arithabort_on AS 'Arithmetic Abort Enabled' ,
+ 
+        is_auto_close_on AS 'Auto CLOSE' ,
+ 
+        is_auto_create_stats_on AS 'Auto Create Statistics' ,
+ 
+        is_auto_shrink_on AS 'Auto Shrink' ,
+ 
+        is_auto_update_stats_async_on AS 'Auto Update Statistics Asynchronously' ,
+ 
+        is_auto_update_stats_on AS 'Auto Update Statistics' ,
+ 
+        is_cursor_close_on_commit_on AS 'Close Cursor on Commit Enabled' ,
+ 
+        is_concat_null_yields_null_on AS 'Concatenate Null Yields Null' ,
+ 
+        is_db_chaining_on AS 'Cross-Database Ownership Chaining Enabled' ,
+ 
+        is_date_correlation_on AS 'Data Correlation Optimization Enabled' ,
+ 
+        is_read_only AS 'Database Read-Only' ,
+ 
+        is_local_cursor_default AS 'Default Cursor' ,
+ 
+        is_encrypted AS 'Encryption Enabled' ,
+ 
+        is_arithabort_on AS 'Numeric Round-Abort' ,
+ 
+        page_verify_option_desc AS 'Page Verify' ,
+ 
+        is_parameterization_forced AS 'Parameterization' ,
+ 
+        is_quoted_identifier_on AS 'Quoted Identifiers Enabled' ,
+ 
+        is_read_committed_snapshot_on AS 'Read Committed Snapshot' ,
+ 
+        is_recursive_triggers_on AS 'Recursive Triggers Enabled' ,
+ 
+        user_access_desc AS 'Restrict Access' ,
+ 
+        is_broker_enabled AS 'Service Broker Enabled' ,
+ 
+        is_trustworthy_on AS 'Trustworthy'
+ 
+FROM    sys.databases ;
+ 
+GO
+------------------------------------------------------
+
+Script to find Users and Roles of a DB ---
+
+SELECT p.NAME
+,m.NAME
+FROM sys.database_role_members rm
+JOIN sys.database_principals p
+ON rm.role_principal_id = p.principal_id
+JOIN sys.database_principals m
+ON rm.member_principal_id = m.principal_id
+
+--------------------------------
+
+Full Backup  ---
+
+Full backup is just that, a full backup of your database at a point in time. You can restore the full backup on the same or a different SQL Server.
+
+Differential Backup -- 
+
+Differential backup backs only the changes since the last full backup. The benefit of differential backup is that it is very fast and takes less space since you are only backing up the changes.
+
+Differential backup has a backup chain which starts from the last full backup. All differential backups are from the previous full backup. It is possible to take another full backup without breaking the differential backup chain, i.e. to have it continue from the previous full backup. If you take a full backup with COPY_ONLY option, you will not break the differential backup chain, but without the COPY_ONLY option, the previous differential backup chain will be broken and a new chain will start from the most recent backup.
+
+You can perform a restore at point in time by restoring a full backup and then applying the most recent differential backup.
+
+Transaction Logs ---
+
+Transaction Logs are the changes since the last transaction log backup. I have seen some confusion about whether transaction log backups are from the last full backup or from the last transaction log backup. If you are taking full database backup for the very first time, you transaction log back up chain will start after the full backup. Any subsequent full or differential backups will not break the log chain and the next transaction log backup will be from the last transaction log backup and not the last full backup.
+
+The transaction log backup only works in Full and Bulk Logged recovery model and the only way to break the log chain is by either switching the recovery model to Simple or if you choose to override existing backup set when creating a full backup media set.
+
+If your database is set to full or bulk logged recovery model, you must take frequent log backups otherwise your log file won't truncate, filling up your hard drive.
+
+It is good to use all three backup schemes in your database environment to ensure you keep the restore media set or files as current as possible, so you can restore to a point in time and minimize data loss
+
+-----------------
+
+Script to shrink all the Databases ---
+
+EXEC sp_MSForEachDB 'DBCC SHRINKDATABASE (''?'' , 0)'
+
+----------------------
+
+Moving System DBs from one Location to another --
+
+http://technet.microsoft.com/en-us/library/ms345408.aspx
+
+http://sqldbasupport.wordpress.com/2011/07/16/moving-system-database-to-a-different-location-in-sql-server-2008-r2/
+
+http://www.mssqltips.com/sqlservertip/1604/move-all-sql-server-system-databases-at-one-time/
+
+---------------------------------------------
+
+Task to connect the Server when Administrative Logins were been dropped or removed
+
+We can regain access to the SQL Server Database Engine as a system administrator. A system administrator can lose access to an instance of SQL Server because of one of the following reasons:
+
+> All logins that are members of the sysadmin fixed server role have been removed by mistake.
+
+> All Windows Groups that are members of the sysadmin fixed server role have been removed by mistake.
+
+> The logins that are members of the sysadmin fixed server role are for individuals who have left the company or who are not available.
+
+> The sa account is disabled or no one knows the password
+
+For this, we need to perfom the stes below to connect the Server with Sysadmin permissions as before :
+
+> SQL Server Configuration Manager -- SQL Server Service -- Properties--Startup Parameters and mention "-m" in Specify a Startup Parameter box and click Add.
+
+> Click Apply, restart SQL Service. When we start an instance of SQL Server in single-user mode, first stop the SQL Server Agent service. Otherwise, SQL Server Agent might connect first and prevent you from connecting as a second user.
+
+> Start -- All Programs -- right click SQL Server Management Studio and click "Run as Administrator" (member of LA). This'll connect to the server with Single-User mode
+
+> Now go to Security -- Logins and right click and then create Windows Login
+
+> Assign Sysadmin permissions to this new Login
+
+> Disconnect from SSMS
+
+> Remove "-m" from Startup Parameters (this will remove the server status from Single-User mode)
+
+> Reconnect SSMS with newly created Windows Sysadmin Login and perform required tasks
+
+Reference Link : http://technet.microsoft.com/en-us/library/dd207004.aspx
+
+--------------------------------------------------------------------
+
+T-SQL command for Striping a database backup ---
+
+BACKUP DATABASE [AdventureWorks2012]
+TO 
+DISK='C:\AdventureWorks2012_1.bak', 
+DISK='C:\AdventureWorks2012_2.bak'
+
+T-SQL command to restore from Striped database backup ---
+
+RESTORE DATABASE [AdventureWorks2012] 
+FROM  
+DISK='C:\AdventureWorks2012_1.bak', 
+DISK='C:\AdventureWorks2012_2.bak'
+
+-------------------------------------------------------------------------
+
+To change the Owner of all Databases ---
+
+sp_msforeachdb 'USE [?]; EXEC dbo.sp_changedbowner ''sa'''
+
+------------------------------------------------------------------------
+
+To attach any Physical file  ----------
+
+EXEC sp_attach_single_file_db @dbname='TestDb',
+@physname=N'C:\Program Files\Microsoft SQL Server\MSSQL10.MSSQLSERVER\MSSQL\DATA\TestDb.mdf'
+GO
+
+-------------------------------------------------------------------------
+
+For finding Fragmentation Level in each & every DB  ---
+
+select * from sys.dm_db_index_physical_stats(NULL, NULL, NULL, NULL, NULL)
+
+---------------------------------------------------------------------------
+
+To find out Buffer Cache Hit Ratio value from System Tables ---
+
+select * from sys.dm_os_performance_counters 
+where object_name = 'SQLServer:Buffer Manager' and counter_name = 'Buffer cache hit ratio'
+                                                                                                                                                                                                             
+select * from sys.dm_os_performance_counters 
+where object_name = 'SQLServer:Buffer Manager' and counter_name = 'Buffer cache hit ratio base'
+
+----------------------------------------------------------------------
+
+Fix for Unable to create restore plan due to break in the LSN Chain in SQL Server
+
+http://execsql.org/fix-unable-create-restore-plan-due-break-lsn-chain-sql-server/
+
+--------------------------------------------------------------------------------
+
+> Recommended locations for Data & Log files  ---
+
+D Drive  -- For TempDB Data & File
+E Drive  -- For User DB Data file
+F Drive  -- For User DB Log file
+H Drive  -- For Backup files
+
+-------------------------------------------------------------------------
+
+> How much RAM Memory needs to be utilized for SQL Server  -- 3/4th of complete RAM size
+
+--------------------------------------------------------------------------
+
+> Does "Log backup with Truncateonly" works in SQL Server 2008 Server ? -- No, it works till 2005 version only 
+> What to do when Mirror DB's Log files is full?
+> What is Mirror backup and split backup?
+> How to take backup of Stored Procedure?
+> How many jobs get created in Logshipping?
+> What to do when Log file is full?
+> Time to perform 500 GB DB backup?
+> Difference b/w Truncate and Delete?
+
+-----------------------------------------------------------------------
+
+> Configuring DB Mail in SQL Server Express edition
+
+--- Create Sysmail Account
+Use sysmail_add_account_sp stored procedure of MSDB database to configure sysmail   account.
+EXECUTE msdb.dbo.sysmail_add_account_sp
+@account_name = 'MailTest',
+@description = 'Sent Mail using MSDB',
+@email_address = 'umashankar@queryingsql.com',
+@display_name = 'umashankar',
+@username='umashankar@queryingsql.com',
+@password='password',
+@mailserver_name = 'mail.queryingsql.com'
+
+--- Creating Database Profile
+Use sysmail_add_profile_sp stored procedure of MSDB database to configure Database Profile.
+EXECUTE msdb.dbo.sysmail_add_profile_sp
+@profile_name = 'MailTest',
+@description = 'Profile used to send mail'
+
+--- Add database Mail account to profile
+Use sysmail_add_profileaccount_sp stored procedure of MSDB database to map database mail account to Profile.
+
+EXECUTE msdb.dbo.sysmail_add_profileaccount_sp
+@profile_name = 'MailTest',
+@account_name = 'MailTest',
+@sequence_number = 1
+
+--- Send Mail using Created Profile
+
+exec msdb.dbo.sp_send_dbmail @profile_name = 'MailTest', 
+@recipients = 'receiver@queryingsql.com', 
+@subject = 'Mail Test', 
+@body = 'Mail Sent Successfully', 
+@body_format = 'text'
+
+--------------------------------------------------------------------------------------
+
