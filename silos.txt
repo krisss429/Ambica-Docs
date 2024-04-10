@@ -1,0 +1,35 @@
+https://sasweb.microsoft.com/Member/Silo  ---silos
+
+
+Regards,
+Ambica
+FAREAST\v-amsadd
+SQL Incident Management 
++1(425)70x59999 | Duty Manager: http://sharepoint/sites/IIM 
+Incident Manager(s): SQLIMgrsr 
+
+
+
+ 
+We see that PLE value is optimal now. You can also check with below query:
+SELECT [object_name],
+[counter_name],
+[cntr_value] FROM sys.dm_os_performance_counters
+WHERE [object_name] LIKE '%Manager%'
+AND [counter_name] = 'Page life expectancy'
+We observed that PLE value is fluctuating frequently. Page life expectancy can't be set automatically. It gives information about how much time a page resides in cache based on the memory settings given to SQL instance.
+For better PLE value, increase the SQL memory and restart the SQL to effect the changes.
+Note: As per MSIT standards, 80% of the memory should distribute Database engine and SSAS and SSRS. Remaining 20 % will take acre OS and TS. Let us know, if you have any queries form our end or we can proceed with closure.
+
+
+
+SQL Incident Management | L1/L2 Line Support
++1-425-705-9999 Op: (2) | Desk: 914066931504
+Incident Manager(s): SQLIMgr 
+IIM SharePoint : Click here 
+
+
+
+
+
+
