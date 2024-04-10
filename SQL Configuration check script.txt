@@ -1,0 +1,474 @@
+SELECT 'Server Name:  '+@@ServerName
+GO
+USE master
+GO
+SET NOCOUNT ON
+declare @strdata varchar(30)
+
+DECLARE @productversion varchar(20)
+DECLARE @platform varchar(20)
+DECLARE @windowsversion varchar(20)
+DECLARE @processorcount varchar(20)
+DECLARE @physicalmem varchar(20)
+
+create table #SVer(ID int,  Name  sysname, Internal_Value int, Value nvarchar(512))
+
+insert #SVer exec master.dbo.xp_msver
+
+CREATE TABLE #SrvProperty (
+		SrvProperty varchar(40),
+		Stat varchar(25)
+	)
+
+select @productversion = value from #SVer where Name = 'Productversion'
+select @platform = value from #SVer where Name = 'platform'
+select @windowsversion = value from #SVer where Name = 'windowsversion'
+select @processorcount = value from #SVer where Name = 'processorcount'
+select @physicalmem = value from #SVer where Name = 'physicalmemory'
+
+
+INSERT INTO #SrvProperty VALUES ('SQL Server Version', @productversion)
+INSERT INTO #SrvProperty VALUES ('Platform', @platform)
+INSERT INTO #SrvProperty VALUES ('Windows Version', @windowsversion)
+INSERT INTO #SrvProperty VALUES ('Processor Count', @processorcount)
+INSERT INTO #SrvProperty VALUES ('Physical Memory (MB)', @physicalmem)
+
+SELECT 'SERVER CONFIGURATION '
+
+SELECT * FROM #SrvProperty
+
+DROP TABLE #SrvProperty
+DROP TABLE #SVer
+
+/*  This code identifies whether data files are on standard locations */
+
+SELECT 'DATA FILE LOCATION'
+PRINT '----------------------------------------------------------------'
+
+if exists (select * from dbo.sysobjects where id = object_id(N'[dbo].[systemdatabasefiles]') and OBJECTPROPERTY(id, N'IsTable') = 1)
+drop table [dbo].[systemdatabasefiles]
+go
+DECLARE @CNT1 INT
+DECLARE @CNT2 INT
+DECLARE @CNT3 INT
+DECLARE @CNT4 INT
+	CREATE TABLE  systemdatabasefiles (
+		[dbname] varchar(40) NOT NULL,
+		[filename] [varchar] (140) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL 
+	)
+	DECLARE @tsql varchar(8000)
+	DECLARE DBfiles CURSOR	FOR
+				SELECT 'select '''+ltrim(rtrim(NAME))+''',filename from ' + 
+				ltrim(rtrim(name))+'..sysfiles' 
+				FROM master.dbo.sysdatabases a where isnull(databaseproperty(a.name,'isReadOnly'),0) = 0
+				and    isnull(databaseproperty(a.name,'isOffline'),0)  = 0
+				and    isnull(databaseproperty(a.name,'IsSuspect'),0)  = 0
+				and    isnull(databaseproperty(a.name,'IsShutDown'),0)  = 0
+				and    isnull(databaseproperty(a.name,'IsNotRecovered'),0)  = 0
+				and    isnull(databaseproperty(a.name,'IsInStandBy'),0)  = 0
+				and    isnull(databaseproperty(a.name,'IsInRecovery'),0)  = 0
+				and    isnull(databaseproperty(a.name,'IsInLoad'),0)  = 0
+				and    isnull(databaseproperty(a.name,'IsEmergencyMode'),0)  = 0
+				and    isnull(databaseproperty(a.name,'IsDetached'),0)  = 0
+				and    name not like '%-%'
+
+	OPEN DBfiles
+	FETCH DBfiles INTO @tsql
+	WHILE @@FETCH_STATUS <> -1
+	BEGIN
+		INSERT  systemdatabasefiles EXEC (@tsql)
+		FETCH NEXT FROM DBfiles INTO @tsql
+	END
+	CLOSE DBFiles
+	DEALLOCATE DBFiles
+
+SELECT @CNT1 = COUNT(*) FROM  systemdatabasefiles WHERE (upper(ltrim(rtrim(filename))) not like 'H:%.MDF' AND upper(ltrim(rtrim(filename))) not like 'I:%.MDF') AND 
+						upper(ltrim(rtrim(filename))) like '%.MDF' AND
+						upper(ltrim(rtrim(dbname))) not in ('MASTER','MODEL','MSDB','TEMPDB') 
+						
+
+SELECT @CNT2 = COUNT(*) FROM  systemdatabasefiles WHERE (upper(ltrim(rtrim(filename))) not like 'H:%.NDF' AND upper(ltrim(rtrim(filename))) not like 'I:%.NDF') AND 
+						upper(ltrim(rtrim(filename))) like '%.NDF' AND
+						upper(ltrim(rtrim(dbname))) not in ('MASTER','MODEL','MSDB','TEMPDB') 
+						
+declare @strdata varchar(30)
+IF @CNT1 <> 0 OR @CNT2 <> 0
+	BEGIN
+		SELECT @strdata = 'Data files-Fail'
+		SELECT 'Following data files are not on standard drives'
+		SELECT DBNAME,Filename FROM  systemdatabasefiles WHERE (upper(ltrim(rtrim(filename))) not like 'H:%.MDF' AND upper(ltrim(rtrim(filename))) not like 'I:%.MDF') AND 
+						upper(ltrim(rtrim(filename))) like '%.MDF' AND
+						upper(ltrim(rtrim(dbname))) not in ('MASTER','MODEL','MSDB','TEMPDB') 
+		UNION ALL
+		SELECT DBNAME,Filename FROM  systemdatabasefiles WHERE (upper(ltrim(rtrim(filename))) not like 'H:%.NDF' AND upper(ltrim(rtrim(filename))) not like 'I:%.NDF') AND 
+						upper(ltrim(rtrim(filename))) like '%.NDF' AND
+						upper(ltrim(rtrim(dbname))) not in ('MASTER','MODEL','MSDB','TEMPDB')
+		ORDER BY dbname				
+	END
+ELSE
+	BEGIN
+		SELECT 'All data files are as per standards'
+		SELECT @strdata = 'Data files-Pass'
+	END	
+
+/* This code identifies whether log files are on standard locations */
+
+SELECT 'LOG FILE LOCATION'
+PRINT '----------------------------------------------------------------'
+SELECT @CNT3 = COUNT (*) FROM  systemdatabasefiles WHERE upper(ltrim(rtrim(filename))) not like 'O:%.LDF' AND 
+						upper(ltrim(rtrim(filename))) like '%.LDF' AND
+				upper(ltrim(rtrim(dbname))) not in ('MASTER','MODEL','MSDB','TEMPDB') 
+				
+declare @strlog varchar(30)
+IF @CNT3 <> 0 
+	BEGIN
+		SELECT @strlog = 'Log files-Fail'
+		SELECT 'Following log files are not on standard drives'
+		SELECT ltrim(rtrim(DBNAME)),ltrim(rtrim(Filename)) FROM  systemdatabasefiles WHERE upper(ltrim(rtrim(filename))) not like 'O:%.LDF' AND 
+						upper(ltrim(rtrim(filename))) like '%.LDF' AND
+				upper(ltrim(rtrim(dbname))) not in ('MASTER','MODEL','MSDB','TEMPDB')
+	END	
+ELSE
+	BEGIN
+		SELECT 'All log files are as per standards'
+		SELECT @strlog = 'Log files-Pass'
+	END
+
+/* This code identifies the databases that have more than one log file*/
+
+SELECT 'DATABASES WITH MULTIPLE LOG FILES'
+PRINT '----------------------------------------------------------------'
+
+select dbname,count(*) as 'Logfiles' into #logcount from  systemdatabasefiles where filename like '%.ldf'  	group by dbname
+declare @logcount varchar(30)
+If exists(select logfiles from #logcount where logfiles > 1) 
+	begin
+	select dbname,logfiles from #logcount where logfiles > 1
+	select @logcount= 'Log files count- Fail'
+	end
+else 
+	BEGIN
+	SELECT 'All databases have only one log file'
+	select @logcount= 'Log files count- Pass'
+	END
+
+/* This code identifies whether Tempdb files are on standard drives */
+
+SELECT 'TEMPDB FILE LOCATION'
+PRINT '----------------------------------------------------------------'
+
+DECLARE @file_name VARCHAR(100)
+declare @strTempdb varchar(30)
+CREATE TABLE #Temp_table (
+		[filename] [nchar] (100) COLLATE SQL_Latin1_General_CP1_CI_AS 
+	)
+DECLARE Tempdb_files CURSOR	FOR
+				SELECT filename from systemdatabasefiles where dbname = 'tempdb'
+
+	OPEN Tempdb_files
+	FETCH Tempdb_files INTO @file_name
+	WHILE @@FETCH_STATUS <> -1
+	BEGIN
+		IF SUBSTRING(@file_name,1,1) != 'T'
+			INSERT into #Temp_table values (@file_name)
+		FETCH NEXT FROM Tempdb_files INTO @file_name		
+	END
+	CLOSE Tempdb_files
+	DEALLOCATE Tempdb_files
+
+SELECT @CNT4 = count(filename) from #Temp_table
+
+IF @CNT4 <> 0 
+	BEGIN
+		SELECT 'Following TempDB files are not on standard drives'
+		SELECT filename from #Temp_table
+		SELECT @strTempdb = 'TempDb files-Fail'
+	END
+ELSE
+	BEGIN
+		SELECT @strTempdb = 'TempDb files-Pass'
+		SELECT 'All TempDB files are on standard drives'
+	END
+
+DROP TABLE #Temp_table
+DROP TABLE systemdatabasefiles
+drop table #logcount
+
+/*This code checks the TempDB file count */
+
+SELECT 'TEMPDB FILE COUNT'
+PRINT '----------------------------------------------------------------'
+ declare @version char(12);
+ set     @version =  convert(char(12),serverproperty('productversion'));
+
+
+ create table #msver_info(ID              int,  
+                           Name            sysname, 
+                           Internal_Value  int, 
+                           Value           nvarchar(512)) 
+ insert #msver_info exec master.dbo.xp_msver
+
+create table #tempdbfile(DBName varchar(30), Proc_count int, File_count int)
+
+if  8 =  (select substring(@version, 1, 1)) 
+         begin
+                set quoted_identifier off
+                
+                declare @dbid    int
+                declare @maxdbid int
+                declare @string  nvarchar(4000)
+                
+                set @dbid    = 2 -- tempdb
+ 
+                create table  #dbinfo_table (server_name nvarchar(256), 
+                                              instance_name nvarchar(256), 
+                                              database_name nvarchar(256), 
+                                              database_id int, 
+                                              file_type nvarchar(25), 
+                                              file_location nvarchar(2556), 
+                                              file_size nvarchar(25))
+
+                select @string = "insert #dbinfo_table"
+							   + " select convert(sysname,(serverproperty('machinename'))), "
+                               + "isnull((convert(sysname,(serverproperty('instancename')))),convert(sysname,(serverproperty('machinename')))),"
+                               + " N'tempdb', "
+                               + convert(char(03),@dbid)
+                               + ", (case status & 0x40 when 0x40 then 'Log File' else 'Data File' end), a.filename,"
+                               + " ltrim(str((convert (dec (15,2),a.size)) * 8192 / 1048576,15,2) + ' MB') from ["
+                               + db_name(@dbid)
+                               + "]..sysfiles a"
+
+                execute sp_executesql @string
+
+               insert into #tempdbfile select 
+                --distinct server_name                         as 'Server Name',                                           
+                       --instance_name                       as 'Instance Name', 
+                       database_name                       as 'Database Name',
+                       --database_id                         as 'Database ID',
+                      (select Internal_Value 
+                         from #msver_info 
+                        where Name = N'ProcessorCount')    as 'Processor Count',
+                      (select count(file_location) 
+                        from #dbinfo_table b 
+                       where b.file_type = 'Data File'
+                         and b.database_id = 2)            as 'File Count'
+                   from #dbinfo_table a
+                 where a.file_type = 'Data File'
+                   and a.database_id = 2
+                   and (select count(file_location) 
+                          from #dbinfo_table c 
+                         where c.file_type = 'data file'
+                           and c.database_id = 2) < (select Internal_Value from #msver_info 
+                                                       where Name = N'ProcessorCount')
+
+                drop table #dbinfo_table
+
+                set quoted_identifier on
+         end;
+         
+   ELSE
+
+ if  9 = (select substring(@version, 1, 1)) or 10 = (select substring(@version, 1, 2))
+
+     begin
+          insert into #tempdbfile select db_name(a.database_id) as 'Database Name',
+                                  (select Internal_Value from #msver_info where Name = N'ProcessorCount')    as 'Processor Count',
+								  (select count(b.physical_name) from master.sys.master_files b  
+								  where b.type = 0 and b.database_id = 2) as 'File Count' 
+           from master.sys.master_files a
+          where a.type = 0
+            and a.database_id = 2
+            and (select count(c.physical_name) 
+                    from master.sys.master_files c 
+                   where c.type = 0
+                     and c.database_id = 2) < (select Internal_Value 
+                                                  from #msver_info 
+                                                 where Name = N'ProcessorCount')
+     end 
+     
+ 
+ declare @tempdbfile varchar (50)
+ If exists(select * from #tempdbfile where Proc_count<> file_count) 
+	begin
+		select distinct rtrim(dbname),proc_count,file_count from #tempdbfile where Proc_count<> file_count
+		SELECT 'TempDB file count is NOT same as number of processors'
+		select @tempdbfile= 'Fail'
+	end
+else 
+	BEGIN
+		select distinct * from #tempdbfile where Proc_count<> file_count
+		SELECT 'TempDB file count is same as number of processors'
+		select @tempdbfile= 'Pass'
+	END
+	
+drop table #tempdbfile
+drop table #msver_info
+
+
+/* This code checks the database properties*/
+
+SELECT 'DATABASES THAT ARE NOT SET WITH DEFAULT OPTIONS'
+PRINT '----------------------------------------------------------------'
+
+create table #dboptions (dbname varchar(40), dboptions varchar(40))
+if  8 =  (select substring(@version, 1, 1))
+         begin
+        	insert into #dboptions select   name ,'Database options' =
+		CASE
+			WHEN databasepropertyex(name, 'IsAutoClose') != 0 THEN  'Auto Close - ON'
+		END 
+		FROM SYSDATABASES where (databasepropertyex(name, 'IsAutoClose')!= 0)
+		UNION 
+		 select   name ,
+		CASE
+			WHEN databasepropertyex(name, 'IsAutoShrink') !=0 THEN  'Auto Shrink - ON'
+		END 
+		FROM SYSDATABASES where (databasepropertyex(name, 'IsAutoShrink') != 0)
+		UNION
+	    	select   name ,
+		CASE
+			WHEN databasepropertyex(name, 'IsAutoCreateStatistics') !=1 THEN  'Auto Create Stats - OFF'
+		END 
+		FROM SYSDATABASES where (databasepropertyex(name, 'IsAutoCreateStatistics') !=1)
+		UNION
+		select   name ,
+		CASE
+			WHEN databasepropertyex(name, 'IsTornPageDetectionEnabled') = 0 THEN  'Torn Page Detection NOT set'
+		END 
+		FROM SYSDATABASES where (databasepropertyex(name, 'IsTornPageDetectionEnabled') = 0) and name <> 'tempdb'
+		
+	End
+Else
+ if  9 = (select substring(@version, 1, 1)) or 10 = (select substring(@version, 1, 2))
+     begin
+        insert into #dboptions select   name ,'Database options' =
+		CASE
+			WHEN is_auto_close_on != 0 THEN  'Auto Close - ON'
+		END 
+		FROM SYS.DATABASES where (is_auto_close_on != 0)
+		UNION 
+		 select   name ,
+		CASE
+			WHEN is_auto_shrink_on != 0 THEN  'Auto Shrink - ON'
+		END 
+		FROM SYS.DATABASES where (is_auto_shrink_on != 0)
+		UNION
+	    select   name ,
+		CASE
+			WHEN is_auto_create_stats_on !=1 THEN  'Auto Create Stats - OFF'
+		END 
+		FROM SYS.DATABASES where (is_auto_create_stats_on !=1)
+		UNION
+		select   name ,
+		CASE
+			WHEN page_verify_option_desc = 'NONE' THEN  'Page Verification Option is NOT set'
+		END 
+		FROM SYS.DATABASES where name <> 'tempdb'
+End
+
+
+declare @dboptions varchar(30)
+If exists(select * from #dboptions where dboptions is NOT NULL) 
+	begin
+	select dbname,dboptions from #dboptions where dboptions is NOT NULL
+	select @dboptions= 'Database options- Fail'
+	end
+else 
+	BEGIN
+		SELECT 'All databases have DEFAULT options SET'
+		select @dboptions= 'Database options- Pass'
+	END
+	
+drop table #dboptions
+
+/* MORE INFORMATION */
+
+CREATE TABLE #DbPropertyStatus (
+		Property varchar(40),
+		Stat varchar(25)
+	)
+
+select 'SECURITY'
+PRINT '----------------------------------------------------------------'
+
+declare @BA varchar(30)
+DECLARE @SEC VARCHAR(10)
+
+IF EXISTS (SELECT 1 FROM master.dbo.syslogins WHERE [NAME] LIKE 'BUILTIN%')
+BEGIN
+			INSERT INTO #dbPropertyStatus VALUES('HAS BUILTIN\ADMINISTRATOR BEEN REMOVED','NO')
+			select @BA = 'Builtin\Admin-Not removed'
+END
+ELSE
+BEGIN
+			INSERT INTO #dbPropertyStatus VALUES('HAS BUILTIN\ADMINISTRATOR BEEN REMOVED','YES')
+			select @BA = 'Builtin\Admin-Removed'
+END
+	
+	--select @BA = STAT FROM #dbPropertyStatus
+	
+IF ((SELECT ServerProperty ('IsIntegratedSecurityOnly'))= 0)
+	BEGIN
+			INSERT INTO #dbPropertyStatus VALUES('AUTHENTICATION MODE','Mixed')
+	END
+ELSE
+	BEGIN
+			INSERT INTO #dbPropertyStatus VALUES('AUTHENTICATION MODE','Windows')
+	END
+SELECT * FROM #dbPropertyStatus
+select @SEC = STAT FROM #dbPropertyStatus
+DROP TABLE #dbPropertyStatus
+
+/* This code identifies SQL server version */
+
+SELECT 'SQL SERVER VERSION'
+PRINT '----------------------------------------------------------------'
+select @version
+declare @versionchk varchar (40)
+
+if  8 = (select substring(@version, 1, 1))		
+	If substring(@version,6,4)>= 2040
+		Begin
+			select @versionchk = 'SQL Server version-Pass'
+			select 'SQL Server version - Pass'
+			End
+	else 
+		Begin
+			select @versionchk = 'SQL Server version-Fail'
+			select 'SQL Server version- Fail'
+		End
+else
+if  9 = (select substring(@version, 1, 1))
+	If substring(@version,6,4)>= 3042
+		Begin
+			select @versionchk = 'SQL Server version-Pass'
+			select 'SQL Server version - Pass'
+			End
+	else 
+		Begin
+			select @versionchk = 'SQL Server version-Fail'
+			select 'SQL Server version- Fail'
+		End
+else
+if  10=(select substring(@version, 1, 2))
+	If substring(@version,6,4)>= 1600
+		Begin
+			select @versionchk = 'SQL Server version-Pass'
+			select 'SQL Server version - Pass'
+		End
+	else 
+		Begin
+			select @versionchk = 'SQL Server version-Fail'
+			select 'SQL Server version - Fail'
+		End
+		
+/*declare @srvname varchar(50)
+select @srvname = RTRIM (@@servername)
+
+
+If @CNT1 =0 and @CNT2=0 and @CNT3=0 and @logcount='Pass' and @CNT4 = 0 and @dboptions ='Pass' and  @BA = 'Builtin\Admin-Removed' and @SEC = 'Windows' and @versionchk= 'Pass'
+
+SELECT @srvname+ ', ' +@strdata+', '+ @strlog+ ', '+@logcount+ ','+@strTempdb+', ' +@dboptions+ ','+@sec+', '+@BA+', ' +@versionchk+ ', '+ 'Status-Pass'
+else
+SELECT @srvname+ ', ' +@strdata+', '+ @strlog+ ', '+@logcount+ ','+@strTempdb+', ' +@dboptions+', ' +@sec+', '+@BA+', ' +@versionchk+ ', '+'Status-Fail'*/
+
