@@ -1,0 +1,20 @@
+# Define the folder path
+$folderPath = "C:\temp\deleteme"
+
+# Get the current date
+$currentDate = Get-Date
+
+# Define the number of days to keep
+$daysToKeep = 0
+
+# Calculate the cutoff date
+$cutoffDate = $currentDate.AddDays(-$daysToKeep)
+
+# Get .trc files older than 7 days
+$oldFiles = Get-ChildItem -Path $folderPath -Filter *.txt | Where-Object { $_.LastWriteTime -lt $cutoffDate }
+
+# Delete old .trc files
+foreach ($oldFile in $oldFiles) {
+    Remove-Item $oldFile.FullName -Force
+    Write-Host "Deleted file: $($oldFile.FullName)"
+}
