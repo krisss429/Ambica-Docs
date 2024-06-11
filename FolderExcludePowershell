@@ -1,0 +1,50 @@
+# Set the source directory and S3 bucket name
+$sourceDirectory = "Z:\backup"
+$s3BucketName = "vflex1-apa1-mssql-db-backups-use1"
+$s3prefix = "vflex_sun"
+$awsCliPath = "E:\Program Files\Amazon\AWSCLIV2\aws.exe"
+$timestamp = (Get-Date).ToString("yyyyMMdd_HHmm")
+$hst_name = $(hostname)
+$logFilePath = "Z:\backup\$hst_name\logs\script_execution_$timestamp.log"
+
+# Function to sync the folder to S3
+Function SyncToS3 {
+    param (
+        [string]$localPath,
+        [string]$s3Path
+    )
+    try {
+        $excludePath = "AuditFiles"
+        & $awsCliPath s3 sync $localPath "s3://$s3BucketName/$s3Path" --exclude "$excludePath/*" | Out-File -FilePath $logFilePath -Append
+    }
+    catch {
+        Write-Host "Sync failed on the following file at $(Get-Date): $_"
+        exit 1
+    }
+}
+
+# Function to delete files older than 48 hours
+Function DeleteOldFiles {
+    param (
+        [string]$path
+    )
+    try {
+        $cutoffDate = (Get-Date).AddHours(-48)
+        $fslist = Get-ChildItem -Path $path -File -Recurse | Where-Object {
+            $_.LastWriteTime -lt $cutoffDate -and $_.FullName -notlike "*AuditFiles*"
+        }
+        if ($fslist -ne $null -and $fslist.Length -gt 0) {
+            $fslist | Out-File -FilePath $logFilePath -Append
+            $fslist | Remove-Item -ErrorAction Stop
+        }
+    }
+    catch {
+        Write-Host "Delete failed at $(Get-Date): $_"
+        exit 1
+    }
+}
+
+# Invoke SyncToS3 function with try...catch
+try {
+    "****File Sync Process process started at $(Get-Date).****" | Tee-Object -FilePath $logFilePath -Append
+    SyncToS3 -localPath $sourceDirectory -s3Path $s
