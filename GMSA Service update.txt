@@ -14,3 +14,11 @@ Set-Service -Name $serviceName -Credential (New-Object System.Management.Automat
 
 # Start the service
 Start-Service -Name $serviceName
+
+
+Verify the Service Configuration:
+
+Verify that the service is configured correctly and running under the gMSA.
+
+
+Get-Service -Name YourServiceName | Select-Object -Property Name, StartType, Status
