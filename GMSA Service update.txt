@@ -1,20 +1,23 @@
-$serviceName = "YourServiceName"
-$gMSA = "domain\gMSA$"
+How to set GMSA account
 
-# Stop the service
-Stop-Service -Name $serviceName
+$serviceName = 'datadogagent' 
+$ServiceObject = Get-WmiObject -Class Win32_Service -Filter "Name='$serviceName'" 
+$ServiceObject.StopService() | out-null
 
-# Change the service account to the gMSA
-$service = Get-WmiObject -Class Win32_Service -Filter "Name='$serviceName'"
-$service.Change($null, $null, $null, $null, $null, $gMSA, $null)
+# Change logon as settings
+$ServiceObject.Change($null, $null, $null, $null, $null, $null, "AWS-AD\CPZ_SQL_GMSA$", $null, $null, $null, $null)
+$ServiceObject.StartService()
 
-# Set the password to null
-$nullPassword = ConvertTo-SecureString -AsPlainText -Force -String ""
-Set-Service -Name $serviceName -Credential (New-Object System.Management.Automation.PSCredential($gMSA, $nullPassword))
+or 
+If the above doesn't work try this:
 
-# Start the service
-Start-Service -Name $serviceName
+$serviceName = 'datadogagent' 
+$ServiceObject = Get-WmiObject -Class Win32_Service -Filter "Name='$serviceName'" 
+$ServiceObject.StopService() | out-null
 
+# Change logon as settings
+$ServiceObject.Change($null, $null, $null, $null, $null, $null, "AWS-AD\CPZ_SQL_GMSA$","", $null, $null, $null)
+$ServiceObject.StartService()
 
 Verify the Service Configuration:
 
