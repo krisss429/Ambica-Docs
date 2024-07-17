@@ -25,3 +25,13 @@ Verify that the service is configured correctly and running under the gMSA.
 
 
 Get-Service -Name YourServiceName | Select-Object -Property Name, StartType, Status
+
+How to set GMSA for windows task scheduler Job 
+
+schtasks /change /TN "YourTaskName" /RU DOMAIN\gMSA_Name$ /RP
+
+schtasks: this is the command line utility for managing scheduled tasks.
+/change: spicifies that you want to modify an existing task.
+/TN: identifies the task by its name (Replace <taskname> with the actual task name).
+/RU:changes the user account under which the task runs (in this case, domain\gmsa$)
+/RP:Specifies a new password for the existing user account. 
