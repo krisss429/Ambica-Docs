@@ -1,0 +1,65 @@
+Creating a SQL Server DBA support flowchart for onboarding new applications onto AWS cloud involves several key steps, including planning, setup, configuration, and ongoing management. Here’s a simplified flowchart outline:
+
+1. Initial Planning and Assessment
+Start
+Identify the application requirements.
+Assess the database size, performance, and availability needs.
+Determine the appropriate AWS services (e.g., EC2, RDS, SQL Server on AWS).
+2. Database Design and Architecture
+Database Design
+Choose between AWS RDS for SQL Server or SQL Server on EC2.
+Plan for high availability, disaster recovery, and security.
+Design the database schema and select the appropriate SQL Server version.
+AWS Architecture
+Define the VPC, subnets, and security groups.
+Plan the network connectivity (VPC Peering, Direct Connect, VPN).
+Determine IAM roles and policies.
+3. Infrastructure Setup
+Provisioning
+Set up AWS RDS instances or EC2 instances with SQL Server.
+Configure storage options (EBS volumes, Provisioned IOPS).
+Security Setup
+Apply security groups and NACLs for network access.
+Implement encryption (TDE, SSL/TLS).
+Set up IAM roles for SQL Server management.
+Monitoring and Alerts
+Configure CloudWatch for monitoring SQL Server metrics.
+Set up SNS alerts for performance issues or failures.
+4. Database Migration
+Data Migration
+Choose the migration method (DMS, Backup/Restore, SSIS).
+Perform initial data migration and verify integrity.
+Test application connectivity and performance.
+Cutover Planning
+Plan the cutover strategy (minimizing downtime).
+Execute the final migration and switchover.
+Post-migration validation.
+5. Application Onboarding
+Integration Testing
+Test the application with the new SQL Server environment.
+Optimize queries and performance as needed.
+User Acceptance Testing (UAT)
+Conduct UAT with the end-users.
+Address any issues and re-test.
+Go-Live
+Schedule the go-live date.
+Monitor closely post-go-live for any issues.
+6. Ongoing Management and Support
+Performance Monitoring
+Regularly monitor SQL Server performance.
+Use tools like CloudWatch, SQL Server Profiler, and Performance Monitor.
+Backup and Recovery
+Implement and test automated backups.
+Set up point-in-time recovery and disaster recovery plans.
+Patching and Maintenance
+Schedule regular patching of SQL Server.
+Conduct maintenance tasks such as index rebuilding and statistics updates.
+7. Documentation and Handover
+Documentation
+Document the entire setup, including architecture, configurations, and procedures.
+Create a runbook for the DBA team.
+Handover
+Conduct a handover session with the support team.
+Ensure all monitoring and alerts are active.
+End
+This flowchart outlines the general steps, but you can expand or modify each step based on specific requirements. If you need a visual representation, tools like Lucidchart or Microsoft Visio can help you create a detailed flowchart.
