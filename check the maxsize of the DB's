@@ -9,10 +9,10 @@ SELECT
     mf.name AS LogicalFileName,
     mf.type_desc AS FileType,
     mf.physical_name AS PhysicalFileName,
-    mf.size * 8 / 1024 AS CurrentSizeMB,
+    CAST(CAST(mf.size AS BIGINT) * 8 / 1024 AS BIGINT) AS CurrentSizeMB,
     CASE 
         WHEN mf.max_size = -1 THEN 'Unlimited'
-        ELSE CAST(mf.max_size * 8 / 1024 AS VARCHAR(50)) 
+        ELSE CAST(CAST(mf.max_size AS BIGINT) * 8 / 1024 AS VARCHAR(50))
     END AS MaxSizeMB
 FROM 
     sys.master_files mf
