@@ -1,0 +1,23 @@
+Script to check the maxsize of all the Databases 
+
+
+USE master;
+GO
+
+SELECT 
+    d.name AS DatabaseName,
+    mf.name AS LogicalFileName,
+    mf.type_desc AS FileType,
+    mf.physical_name AS PhysicalFileName,
+    mf.size * 8 / 1024 AS CurrentSizeMB,
+    CASE 
+        WHEN mf.max_size = -1 THEN 'Unlimited'
+        ELSE CAST(mf.max_size * 8 / 1024 AS VARCHAR(50)) 
+    END AS MaxSizeMB
+FROM 
+    sys.master_files mf
+JOIN 
+    sys.databases d ON mf.database_id = d.database_id
+ORDER BY 
+    d.name,
+    mf.type_desc;
