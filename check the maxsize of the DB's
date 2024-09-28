@@ -21,3 +21,4 @@ JOIN
 ORDER BY 
     d.name,
     mf.type_desc;
+
