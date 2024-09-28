@@ -22,3 +22,44 @@ ORDER BY
     d.name,
     mf.type_desc;
 
+-------------------------------------------------------
+script to check if the current size reached to 85% 
+
+USE master;
+GO
+
+WITH DatabaseSizeInfo AS (
+    SELECT 
+        d.name AS DatabaseName,
+        mf.name AS LogicalFileName,
+        mf.type_desc AS FileType,
+        mf.physical_name AS PhysicalFileName,
+        CAST(CAST(mf.size AS BIGINT) * 8 / 1024 AS BIGINT) AS CurrentSizeMB,
+        CASE 
+            WHEN mf.max_size = -1 THEN NULL  -- Unlimited growth
+            ELSE CAST(CAST(mf.max_size AS BIGINT) * 8 / 1024 AS BIGINT) 
+        END AS MaxSizeMB
+    FROM 
+        sys.master_files mf
+    JOIN 
+        sys.databases d ON mf.database_id = d.database_id
+)
+SELECT 
+    DatabaseName,
+    LogicalFileName,
+    FileType,
+    PhysicalFileName,
+    CurrentSizeMB,
+    MaxSizeMB,
+    CASE 
+        WHEN MaxSizeMB IS NOT NULL THEN CAST((CAST(CurrentSizeMB AS FLOAT) / MaxSizeMB) * 100 AS DECIMAL(5, 2))
+        ELSE NULL 
+    END AS PercentageUsed,
+    CASE 
+        WHEN MaxSizeMB IS NOT NULL AND (CAST(CurrentSizeMB AS FLOAT) / MaxSizeMB) * 100 >= 85 THEN 'Warning: 85% or more used'
+        ELSE 'OK'
+    END AS Status
+FROM 
+    DatabaseSizeInfo
+ORDER BY 
+    PercentageUsed DESC;
