@@ -1,0 +1,21 @@
+SELECT 
+    s.session_id,
+    s.login_name,
+    s.host_name,
+    s.program_name,
+    s.status,
+    s.cpu_time AS cpu_time_ms,
+    r.memory_usage * 8 AS memory_usage_kb,  -- Memory usage in kilobytes (8KB pages)
+    r.start_time,
+    r.command,
+    r.database_id,
+    DB_NAME(r.database_id) AS database_name
+FROM 
+    sys.dm_exec_sessions AS s
+JOIN 
+    sys.dm_exec_requests AS r 
+    ON s.session_id = r.session_id
+CROSS APPLY 
+    sys.dm_exec_sql_text(r.sql_handle) AS sql_text
+ORDER BY 
+    cpu_time_ms DESC; 
